@@ -31,7 +31,7 @@ children:
         events:
           change: ./supercode.events::onChange_varOptions
         columns:
-          - name: variable
+          - name: var
             label: Variable
             stretchFactor: 1
             template:
