@@ -25,6 +25,10 @@ options:
     template:
       type: Group
       elements:
+        - name: varName
+          type: Variable
+          content: $key
+
         - name: coding
           title: Coding
           type: List
@@ -50,7 +54,7 @@ options:
         - name: refLevel
           title: Reference / First Level
           type: Level
-          variable: (key)
+          variable: (varName)
           description: >
             Used by Dummy, Simple, and Deviation.
             For Helmert/Difference codings, determines level ordering.

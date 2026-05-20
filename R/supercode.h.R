@@ -31,6 +31,10 @@ supercodeOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "varOptions",
                     NULL,
                     elements=list(
+                        jmvcore::OptionVariable$new(
+                            "varName",
+                            NULL,
+                            content="$key"),
                         jmvcore::OptionList$new(
                             "coding",
                             NULL,
@@ -47,7 +51,7 @@ supercodeOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                         jmvcore::OptionLevel$new(
                             "refLevel",
                             NULL,
-                            variable="(key)"),
+                            variable="(varName)"),
                         jmvcore::OptionBool$new(
                             "standardize",
                             NULL,

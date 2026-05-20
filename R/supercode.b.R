@@ -16,17 +16,30 @@ supercodeClass <- R6::R6Class(
 
       for (i in seq_along(vars)) {
         v      <- vars[[i]]
-        opts   <- varOpts[[i]]
-        coding <- opts$coding
-        stdz   <- opts$standardize
-        ref    <- opts$refLevel
+        opts   <- if (v %in% names(varOpts)) varOpts[[v]] else varOpts[[i]]
+        
+        if (is.null(opts)) {
+          coding <- "dummy"
+          stdz   <- FALSE
+          ref    <- NULL
+        } else {
+          coding <- if (is.null(opts$coding)) "dummy" else opts$coding
+          stdz   <- if (is.null(opts$standardize)) FALSE else opts$standardize
+          ref    <- opts$refLevel
+        }
 
         col <- self$data[[v]]
         fac <- as.factor(col)
 
         lvls <- levels(fac)
-        if (!is.null(ref) && ref %in% lvls) {
-          lvls <- c(ref, setdiff(lvls, ref))
+        if (!is.null(ref) && ref != "" && ref %in% lvls) {
+          if (coding == "deviation") {
+            # Deviation uses the last level as the reference level
+            lvls <- c(setdiff(lvls, ref), ref)
+          } else {
+            # Dummy, Simple, and Helmert/Difference codings put the reference/first level first
+            lvls <- c(ref, setdiff(lvls, ref))
+          }
           fac  <- factor(fac, levels = lvls)
         }
 
@@ -63,10 +76,11 @@ supercodeClass <- R6::R6Class(
         descriptions = titles_out,
         measureTypes = mtypes
       )
+      self$results$outputCols$setRowNums(rownames(self$data))
       for (i in seq_along(keys_out)) {
         self$results$outputCols$setValues(
           index  = i,
-          allvals[[keys_out[i]]])
+          values = allvals[[keys_out[i]]])
       }
     },
 

@@ -23,6 +23,12 @@ children:
             fullRowSelect: true
             stretchFactor: 1
             columns:
+              - name: varName
+                stretchFactor: 1
+                template:
+                  type: VariablesListBox
+                  maxItemCount: 1
+                  isTarget: true
               - name: coding
                 stretchFactor: 1
                 template:
