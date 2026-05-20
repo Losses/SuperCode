@@ -2,7 +2,7 @@ title: Super Code
 name: supercode
 jus: '3.0'
 stage: 0
-compilerMode: aggressive
+compilerMode: tame
 children:
   - type: VariableSupplier
     persistentItems: false
@@ -14,33 +14,32 @@ children:
           - type: VariablesListBox
             name: vars
             isTarget: true
-      - type: TargetLayoutBox
-        label: ''
-        children:
-          - type: ListBox
-            name: varOptions
-            showColumnHeaders: false
-            fullRowSelect: true
+  - type: CollapseBox
+    label: Coding Options
+    collapsed: false
+    children:
+      - type: ListBox
+        name: varOptions
+        showColumnHeaders: true
+        fullRowSelect: true
+        stretchFactor: 1
+        columns:
+          - name: varName
             stretchFactor: 1
-            columns:
-              - name: varName
-                stretchFactor: 1
-                template:
-                  type: VariablesListBox
-                  maxItemCount: 1
-                  isTarget: true
-              - name: coding
-                stretchFactor: 1
-                template:
-                  type: ComboBox
-              - name: refLevel
-                stretchFactor: 1
-                template:
-                  type: LevelSelector
-              - name: standardize
-                stretchFactor: 1
-                template:
-                  type: CheckBox
+            template:
+              type: VariableLabel
+          - name: coding
+            stretchFactor: 1
+            template:
+              type: ComboBox
+          - name: refLevel
+            stretchFactor: 1
+            template:
+              type: LevelSelector
+          - name: standardize
+            stretchFactor: 1
+            template:
+              type: CheckBox
   - type: LayoutBox
     margin: large
     children:

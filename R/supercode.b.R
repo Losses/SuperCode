@@ -144,7 +144,7 @@ supercodeClass <- R6::R6Class(
       }, character(1))
 
       sprintf(
-        "<p><b>%s</b> &mdash; %s</p>
+        "<p><b>%s</b>(%s)</p>
          <table border='1' cellpadding='4' style='border-collapse:collapse'>
            <thead><tr>%s</tr></thead>
            <tbody>%s</tbody>
