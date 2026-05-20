@@ -28,7 +28,7 @@ children:
         fullRowSelect: true
         stretchFactor: 1
         columns:
-          - name: varName
+          - name: var
             stretchFactor: 1
             template:
               type: VariableLabel
@@ -37,7 +37,7 @@ children:
             template:
               type: ComboBox
               label: ''
-          - name: refLevel
+          - name: ref
             stretchFactor: 1
             template:
               type: LevelSelector

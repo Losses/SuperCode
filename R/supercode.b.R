@@ -25,7 +25,7 @@ supercodeClass <- R6::R6Class(
         } else {
           coding <- if (is.null(opts$coding)) "dummy" else opts$coding
           stdz   <- if (is.null(opts$standardize)) FALSE else opts$standardize
-          ref    <- opts$refLevel
+          ref    <- opts$ref
         }
 
         col <- self$data[[v]]

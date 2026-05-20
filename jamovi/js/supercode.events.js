@@ -21,16 +21,16 @@ function updateVarOptions(ui, context) {
         let varName = varsList[i];
         let found = null;
         for (let j = 0; j < currentList.length; j++) {
-            if (currentList[j].varName === varName) {
+            if (currentList[j].var === varName) {
                 found = currentList[j];
                 break;
             }
         }
         if (found === null) {
             newList.push({
-                varName: varName,
+                var: varName,
                 coding: "dummy",
-                refLevel: "",
+                ref: "",
                 standardize: false
             });
         } else {
