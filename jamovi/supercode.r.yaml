@@ -9,7 +9,7 @@ items:
     type: Array
     items: (vars)
     template:
-      title: Contrast Matrix - $key
+      title: $key
       type: Table
       columns: []
 

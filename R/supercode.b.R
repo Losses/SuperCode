@@ -40,8 +40,23 @@ supercodeClass <- R6::R6Class(
 
         table <- tables$get(key = v)
 
+        # Mapping for full coding names in table titles
+        codingNames <- list(
+          dummy = "Dummy (Treatment)",
+          simple = "Simple",
+          deviation = "Deviation (Sum)",
+          poly = "Orthogonal Polynomial",
+          helmert = "Helmert",
+          revhelmert = "Reverse Helmert",
+          forward = "Forward Difference",
+          backward = "Backward Difference"
+        )
+        codingName <- codingNames[[coding]]
+        if (is.null(codingName))
+          codingName <- coding
+
         # Set title dynamically to include coding name
-        table$setTitle(paste0("Contrast Matrix - ", v, " (", coding, ")"))
+        table$setTitle(paste0(v, " (", codingName, ")"))
 
         # Add Level column
         table$addColumn(name = "level", title = "Level", type = "text")
