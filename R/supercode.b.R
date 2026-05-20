@@ -48,6 +48,9 @@ supercodeClass <- R6::R6Class(
         if (k < 2) next
 
         cm <- private$.buildCM(coding, k)
+        preview_cm <- cm
+        if (stdz)
+          preview_cm <- scale(preview_cm)
 
         coded <- cm[as.integer(fac), , drop = FALSE]
         if (stdz) coded <- scale(coded)
@@ -63,7 +66,7 @@ supercodeClass <- R6::R6Class(
         }
 
         html_parts <- c(html_parts,
-          private$.buildPreviewHtml(v, coding, lvls, cm))
+          private$.buildPreviewHtml(v, coding, lvls, preview_cm))
       }
 
       self$results$preview$setContent(
@@ -101,7 +104,7 @@ supercodeClass <- R6::R6Class(
           contr.sum(k)
         },
         poly = {
-          contr.poly(k)
+          private$.buildRawPolyCM(k)
         },
         helmert = {
           m <- matrix(0, nrow = k, ncol = k-1)
@@ -131,6 +134,42 @@ supercodeClass <- R6::R6Class(
           m
         }
       )
+    },
+
+    .buildRawPolyCM = function(k) {
+      x <- seq_len(k)
+      powers <- sapply(seq_len(k - 1), function(degree) x ^ degree)
+
+      if (k - 1 == 1)
+        powers <- matrix(powers, ncol = 1)
+
+      centered <- scale(powers, center = TRUE, scale = FALSE)
+      qr_q <- qr.Q(qr(centered))
+      raw <- matrix(0, nrow = k, ncol = k - 1)
+
+      for (j in seq_len(k - 1)) {
+        col <- qr_q[, j]
+        non_zero <- which(abs(col) > sqrt(.Machine$double.eps))
+
+        min_abs <- min(abs(col[non_zero]))
+        scaled <- col / min_abs
+        rounded <- round(scaled)
+        gcd_value <- Reduce(private$.gcd, abs(rounded[rounded != 0]))
+        raw[, j] <- rounded / gcd_value
+      }
+
+      raw
+    },
+
+    .gcd = function(a, b) {
+      a <- as.integer(abs(a))
+      b <- as.integer(abs(b))
+      while (b != 0) {
+        tmp <- b
+        b <- a %% b
+        a <- tmp
+      }
+      a
     },
 
     .buildPreviewHtml = function(varName, coding, lvls, cm) {
