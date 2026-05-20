@@ -3,6 +3,8 @@ name: supercode
 jus: '3.0'
 stage: 0
 compilerMode: tame
+events:
+  update: ./supercode.events::update
 children:
   - type: VariableSupplier
     persistentItems: false
@@ -14,6 +16,8 @@ children:
           - type: VariablesListBox
             name: vars
             isTarget: true
+            events:
+              change: ./supercode.events::onChange_vars
   - type: CollapseBox
     label: Coding Options
     collapsed: false
@@ -45,3 +49,5 @@ children:
     children:
       - type: Output
         name: outputCols
+      - type: ActionButton
+        name: runButton

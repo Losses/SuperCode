@@ -68,4 +68,10 @@ options:
   - name: outputCols
     title: Add columns to dataset
     type: Output
+
+  - name: runButton
+    title: Add Columns
+    type: Action
+    default: false
 ...
+

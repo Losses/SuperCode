@@ -68,19 +68,21 @@ supercodeClass <- R6::R6Class(
       self$results$preview$setContent(
         paste(html_parts, collapse = "<hr/>"))
 
-      if (length(keys_out) == 0) return()
+      if (self$options$runButton) {
+        if (length(keys_out) == 0) return()
 
-      self$results$outputCols$set(
-        keys         = keys_out,
-        titles       = titles_out,
-        descriptions = titles_out,
-        measureTypes = mtypes
-      )
-      self$results$outputCols$setRowNums(rownames(self$data))
-      for (i in seq_along(keys_out)) {
-        self$results$outputCols$setValues(
-          index  = i,
-          values = allvals[[keys_out[i]]])
+        self$results$outputCols$set(
+          keys         = keys_out,
+          titles       = titles_out,
+          descriptions = titles_out,
+          measureTypes = mtypes
+        )
+        self$results$outputCols$setRowNums(rownames(self$data))
+        for (i in seq_along(keys_out)) {
+          self$results$outputCols$setValues(
+            index  = i,
+            values = allvals[[keys_out[i]]])
+        }
       }
     },
 
