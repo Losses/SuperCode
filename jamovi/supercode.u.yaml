@@ -34,17 +34,20 @@ children:
           - name: var
             label: Variable
             stretchFactor: 1
+            selectable: false
             template:
               type: VariableLabel
           - name: coding
             label: Coding
             stretchFactor: 1
+            selectable: false
             template:
               type: ComboBox
               label: ''
           - name: ref
             label: Reference Level
             stretchFactor: 1
+            selectable: false
             template:
               type: LevelSelector
               label: ''
@@ -54,6 +57,7 @@ children:
           - name: standardize
             label: Std.
             stretchFactor: 0.25
+            selectable: false
             template:
               type: CheckBox
               label: ''

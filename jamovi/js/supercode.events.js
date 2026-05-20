@@ -63,8 +63,16 @@ function updateLevelControls(ui) {
     let dlist = ui.varOptions.value();
 
     ui.varOptions.applyToItems(0, (item, index, column) => {
-        if (column === 2)
-            item.setPropertyValue('variable', dlist[index].var);
+        if (column === 2) {
+            let row = dlist[index] || {};
+            let enabled = supportsReferenceLevel(row.coding);
+
+            item.setPropertyValue('variable', row.var);
+            item.setPropertyValue('enable', enabled);
+
+            if (item.input)
+                item.input.disabled = !enabled;
+        }
     });
 }
 
