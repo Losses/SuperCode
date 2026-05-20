@@ -3,14 +3,21 @@ const REF_LEVEL_CODINGS = new Set(["dummy", "simple", "deviation"]);
 const events = {
     update: function(ui) {
         updateVarOptions(ui);
+        updateOutputButton(ui);
+    },
+
+    view_updated: function(ui) {
+        updateOutputButton(ui);
     },
 
     onChange_vars: function(ui) {
         updateVarOptions(ui);
+        updateOutputButton(ui);
     },
 
     onChange_varOptions: function(ui) {
         updateVarOptions(ui);
+        updateOutputButton(ui);
     }
 };
 
@@ -29,6 +36,88 @@ function normalizeVarOption(option, varName) {
         ref: ref,
         standardize: standardize
     };
+}
+
+function ensureOutputButtonStyles() {
+    if (document.getElementById('supercode-output-button-style'))
+        return;
+
+    let style = document.createElement('style');
+    style.id = 'supercode-output-button-style';
+    style.textContent = `
+        .jmv-action-button.supercode-output-button.supercode-output-remove {
+            background: #ffffff;
+            background-image: none;
+            border: 1px solid #c2410c;
+            box-shadow: none;
+            color: #c2410c;
+        }
+
+        .jmv-action-button.supercode-output-button.supercode-output-remove:hover {
+            background: #fff7ed;
+            background-image: none;
+        }
+
+        .jmv-action-button.supercode-output-button.supercode-output-remove:active:hover {
+            background: #ffedd5;
+        }
+
+        .jmv-action-button.supercode-output-button.supercode-output-disabled {
+            color: #c5c5c5;
+            background-color: #ababab;
+            background-image: none;
+            box-shadow: none;
+            border: 1px solid #ababab;
+            cursor: default;
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+function updateOutputButton(ui) {
+    let control = ui.outputCols;
+    if (!control)
+        return;
+
+    let root = control.el || control._subel;
+    if (!root)
+        return;
+
+    let input = control.input || root.querySelector('input[type="checkbox"]');
+    let text = control.label || root.querySelector('span');
+    let label = text ? text.parentElement : root.querySelector('label');
+
+    if (!input || !text || !label)
+        return;
+
+    ensureOutputButtonStyles();
+    bindOutputButtonEvents(ui, input);
+
+    input.style.position = 'absolute';
+    input.style.opacity = '0';
+    input.style.width = '1px';
+    input.style.height = '1px';
+    input.style.margin = '0';
+    input.style.pointerEvents = 'none';
+
+    label.classList.add('jmv-action-button', 'supercode-output-button');
+    label.style.cursor = input.disabled ? 'default' : 'pointer';
+
+    applyOutputButtonState(label, text, input.checked, input.disabled);
+}
+
+function bindOutputButtonEvents(ui, input) {
+    if (input.dataset.supercodeButtonBound === 'true')
+        return;
+
+    input.dataset.supercodeButtonBound = 'true';
+    input.addEventListener('change', () => updateOutputButton(ui));
+}
+
+function applyOutputButtonState(label, text, checked, disabled) {
+    text.textContent = checked ? 'Remove Columns' : 'Add Columns';
+    label.classList.toggle('supercode-output-remove', checked && !disabled);
+    label.classList.toggle('supercode-output-disabled', disabled);
 }
 
 function updateVarOptions(ui) {
