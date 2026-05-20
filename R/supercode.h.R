@@ -100,7 +100,7 @@ supercodeResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 items="(vars)",
                 template=jmvcore::Table$new(
                     options=options,
-                    title="Contrast Matrix - $key",
+                    title="$key",
                     columns=list())))
             self$add(jmvcore::Output$new(
                 options=options,
