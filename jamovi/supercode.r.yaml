@@ -1,0 +1,12 @@
+---
+name: supercode
+title: Super Code
+jrs: '1.1'
+
+items:
+  - name: outputCols
+    title: Coded Columns
+    type: Output
+    initInRun: true
+
+...

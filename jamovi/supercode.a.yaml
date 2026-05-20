@@ -1,0 +1,43 @@
+---
+name: supercode
+title: Super Code
+menuGroup: SuperCode
+version: '0.0.1'
+jas: '1.2'
+
+options:
+  - name: data
+    type: Data
+
+  - name: vars
+    title: Variables (Nominal / Ordinal)
+    type: Variables
+    suggested:
+      - nominal
+      - ordinal
+    permitted:
+      - factor
+
+  - name: coding
+    title: Contrast Coding
+    type: List
+    options:
+      - title: Dummy (Treatment)
+        name: dummy
+      - title: Helmert
+        name: helmert
+      - title: Orthogonal Polynomial
+        name: poly
+      - title: Deviation (Sum)
+        name: deviation
+    default: dummy
+
+  - name: standardize
+    title: Standardize coded columns
+    type: Bool
+    default: false
+
+  - name: outputCols
+    title: Add columns to dataset
+    type: Output
+...
