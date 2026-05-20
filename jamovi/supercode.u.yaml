@@ -52,8 +52,8 @@ children:
                 (coding == "dummy" or coding == "simple" or coding ==
                 "deviation")
           - name: standardize
-            label: Standardize
-            stretchFactor: 0.5
+            label: Std.
+            stretchFactor: 0.25
             template:
               type: CheckBox
               label: ''
