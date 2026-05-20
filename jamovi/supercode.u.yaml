@@ -31,16 +31,19 @@ children:
         events:
           change: ./supercode.events::onChange_varOptions
         columns:
-          - name: Variable
+          - name: variable
+            label: Variable
             stretchFactor: 1
             template:
               type: VariableLabel
-          - name: Coding
+          - name: coding
+            label: Coding
             stretchFactor: 1
             template:
               type: ComboBox
               label: ''
-          - name: Reference Level
+          - name: ref
+            label: Reference Level
             stretchFactor: 1
             template:
               type: LevelSelector
@@ -48,7 +51,8 @@ children:
               enable: >-
                 (coding == "dummy" or coding == "simple" or coding ==
                 "deviation")
-          - name: Standardize
+          - name: standardize
+            label: Standardize
             stretchFactor: 0.5
             template:
               type: CheckBox
