@@ -36,18 +36,27 @@ children:
             stretchFactor: 1
             template:
               type: ComboBox
+              label: ''
           - name: refLevel
             stretchFactor: 1
             template:
               type: LevelSelector
+              label: ''
+              enable: >-
+                (coding == "dummy" or coding == "simple" or coding ==
+                "deviation")
           - name: standardize
-            stretchFactor: 1
+            stretchFactor: 0.5
             template:
               type: CheckBox
+              label: ''
+  - type: LayoutBox
+    margin: large
+    children:
+      - type: ActionButton
+        name: runButton
   - type: LayoutBox
     margin: large
     children:
       - type: Output
         name: outputCols
-      - type: ActionButton
-        name: runButton
