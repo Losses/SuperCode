@@ -7,8 +7,7 @@ supercodeOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     public = list(
         initialize = function(
             vars = NULL,
-            varOptions = NULL,
-            runButton = FALSE, ...) {
+            varOptions = NULL, ...) {
 
             super$initialize(
                 package="SuperCode",
@@ -58,26 +57,19 @@ supercodeOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                             default=FALSE))))
             private$..outputCols <- jmvcore::OptionOutput$new(
                 "outputCols")
-            private$..runButton <- jmvcore::OptionAction$new(
-                "runButton",
-                runButton,
-                default=FALSE)
 
             self$.addOption(private$..vars)
             self$.addOption(private$..varOptions)
             self$.addOption(private$..outputCols)
-            self$.addOption(private$..runButton)
         }),
     active = list(
         vars = function() private$..vars$value,
         varOptions = function() private$..varOptions$value,
-        outputCols = function() private$..outputCols$value,
-        runButton = function() private$..runButton$value),
+        outputCols = function() private$..outputCols$value),
     private = list(
         ..vars = NA,
         ..varOptions = NA,
-        ..outputCols = NA,
-        ..runButton = NA)
+        ..outputCols = NA)
 )
 
 supercodeResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
@@ -135,7 +127,6 @@ supercodeBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' @param data .
 #' @param vars .
 #' @param varOptions .
-#' @param runButton .
 #' @return A results object containing:
 #' \tabular{llllll}{
 #'   \code{results$preview} \tab \tab \tab \tab \tab an array of tables \cr
@@ -146,8 +137,7 @@ supercodeBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 supercode <- function(
     data,
     vars,
-    varOptions,
-    runButton = FALSE) {
+    varOptions) {
 
     if ( ! requireNamespace("jmvcore", quietly=TRUE))
         stop("supercode requires jmvcore to be installed (restart may be required)")
@@ -162,8 +152,7 @@ supercode <- function(
 
     options <- supercodeOptions$new(
         vars = vars,
-        varOptions = varOptions,
-        runButton = runButton)
+        varOptions = varOptions)
 
     analysis <- supercodeClass$new(
         options = options,

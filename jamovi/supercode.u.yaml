@@ -64,10 +64,5 @@ children:
   - type: LayoutBox
     margin: large
     children:
-      - type: ActionButton
-        name: runButton
-  - type: LayoutBox
-    margin: large
-    children:
       - type: Output
         name: outputCols

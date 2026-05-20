@@ -58,19 +58,28 @@ supercodeClass <- R6::R6Class(
         # Set title dynamically to include coding name
         table$setTitle(paste0(v, " (", codingName, ")"))
 
-        # Add Level column
-        table$addColumn(name = "level", title = "Level", type = "text")
+        # Add Comparison/Contrast column
+        table$addColumn(name = "contrast", title = "Comparison", type = "text")
 
-        # Add coding columns
-        for (j in seq_len(k - 1)) {
-          colName <- paste0("col", j)
-          colTitle <- paste0(coding, j)
+        # Add Description column
+        table$addColumn(name = "description", title = "Contrast / Comparison Task", type = "text")
+
+        # Add level columns
+        for (j in seq_len(k)) {
+          colName <- paste0("lvlCol", j)
+          colTitle <- lvls[j]
           table$addColumn(name = colName, title = colTitle, type = "number")
         }
 
+        # Get contrast labels
+        labels <- private$.getContrastLabels(coding, lvls)
+
         # Add rows
-        for (rowIdx in seq_len(k)) {
-          table$addRow(rowKey = rowIdx, values = list(level = lvls[rowIdx]))
+        for (rowIdx in seq_len(k - 1)) {
+          table$addRow(rowKey = rowIdx, values = list(
+            contrast = paste0(coding, rowIdx),
+            description = labels[rowIdx]
+          ))
         }
       }
     },
@@ -126,11 +135,11 @@ supercodeClass <- R6::R6Class(
 
         # Populate the table cells
         table <- tables$get(key = v)
-        for (rowIdx in seq_len(k)) {
+        for (rowIdx in seq_len(k - 1)) {
           rowVals <- list()
-          for (j in seq_len(k - 1)) {
-            colName <- paste0("col", j)
-            rowVals[[colName]] <- preview_cm[rowIdx, j]
+          for (j in seq_len(k)) {
+            colName <- paste0("lvlCol", j)
+            rowVals[[colName]] <- preview_cm[j, rowIdx]
           }
           table$setRow(rowNo = rowIdx, values = rowVals)
         }
@@ -150,7 +159,7 @@ supercodeClass <- R6::R6Class(
         }
       }
 
-      if (self$options$runButton) {
+      if (self$options$outputCols) {
         if (length(keys_out) == 0) return()
 
         self$results$outputCols$set(
@@ -166,6 +175,70 @@ supercodeClass <- R6::R6Class(
             values = allvals[[keys_out[i]]])
         }
       }
+    },
+
+    .getContrastLabels = function(coding, lvls) {
+      k <- length(lvls)
+      labels <- character(k - 1)
+      if (k < 2) return(labels)
+
+      switch(coding,
+        dummy = {
+          for (j in seq_len(k - 1)) {
+            labels[j] <- paste0(lvls[j + 1], " - ", lvls[1])
+          }
+        },
+        simple = {
+          for (j in seq_len(k - 1)) {
+            labels[j] <- paste0(lvls[j + 1], " - ", lvls[1])
+          }
+        },
+        deviation = {
+          all_lvls <- paste(lvls, collapse = ", ")
+          for (j in seq_len(k - 1)) {
+            labels[j] <- paste0(lvls[j], " - (", all_lvls, ")")
+          }
+        },
+        poly = {
+          names_poly <- c("linear", "quadratic", "cubic", "quartic", "quintic", "sextic", "septic", "octic")
+          for (j in seq_len(k - 1)) {
+            if (j <= length(names_poly)) {
+              labels[j] <- names_poly[j]
+            } else {
+              labels[j] <- paste0("degree ", j, " polynomial")
+            }
+          }
+        },
+        helmert = {
+          for (j in seq_len(k - 1)) {
+            rhs <- paste(lvls[(j + 1):k], collapse = ", ")
+            if (length((j + 1):k) > 1) {
+              rhs <- paste0("(", rhs, ")")
+            }
+            labels[j] <- paste0(lvls[j], " - ", rhs)
+          }
+        },
+        revhelmert = {
+          for (j in seq_len(k - 1)) {
+            rhs <- paste(lvls[1:j], collapse = ", ")
+            if (j > 1) {
+              rhs <- paste0("(", rhs, ")")
+            }
+            labels[j] <- paste0(lvls[j + 1], " - ", rhs)
+          }
+        },
+        forward = {
+          for (j in seq_len(k - 1)) {
+            labels[j] <- paste0(lvls[j], " - ", lvls[j + 1])
+          }
+        },
+        backward = {
+          for (j in seq_len(k - 1)) {
+            labels[j] <- paste0(lvls[j + 1], " - ", lvls[j])
+          }
+        }
+      )
+      labels
     },
 
     .buildCM = function(coding, k) {
