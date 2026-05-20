@@ -10,7 +10,7 @@ options:
     type: Data
 
   - name: vars
-    title: Variables (Nominal / Ordinal)
+    title: Variables
     type: Variables
     suggested:
       - nominal
@@ -18,24 +18,47 @@ options:
     permitted:
       - factor
 
-  - name: coding
-    title: Contrast Coding
-    type: List
-    options:
-      - title: Dummy (Treatment)
-        name: dummy
-      - title: Helmert
-        name: helmert
-      - title: Orthogonal Polynomial
-        name: poly
-      - title: Deviation (Sum)
-        name: deviation
-    default: dummy
+  - name: varOptions
+    title: ''
+    type: Array
+    items: (vars)
+    template:
+      type: Group
+      elements:
+        - name: coding
+          title: Coding
+          type: List
+          options:
+            - title: Dummy (Treatment)
+              name: dummy
+            - title: Simple
+              name: simple
+            - title: Deviation (Sum)
+              name: deviation
+            - title: Orthogonal Polynomial
+              name: poly
+            - title: Helmert
+              name: helmert
+            - title: Reverse Helmert
+              name: revhelmert
+            - title: Forward Difference
+              name: forward
+            - title: Backward Difference
+              name: backward
+          default: dummy
 
-  - name: standardize
-    title: Standardize coded columns
-    type: Bool
-    default: false
+        - name: refLevel
+          title: Reference / First Level
+          type: Level
+          variable: (key)
+          description: >
+            Used by Dummy, Simple, and Deviation.
+            For Helmert/Difference codings, determines level ordering.
+
+        - name: standardize
+          title: Standardize
+          type: Bool
+          default: false
 
   - name: outputCols
     title: Add columns to dataset

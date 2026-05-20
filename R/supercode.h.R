@@ -7,8 +7,7 @@ supercodeOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     public = list(
         initialize = function(
             vars = NULL,
-            coding = "dummy",
-            standardize = FALSE, ...) {
+            varOptions = NULL, ...) {
 
             super$initialize(
                 package="SuperCode",
@@ -24,36 +23,49 @@ supercodeOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "ordinal"),
                 permitted=list(
                     "factor"))
-            private$..coding <- jmvcore::OptionList$new(
-                "coding",
-                coding,
-                options=list(
-                    "dummy",
-                    "helmert",
-                    "poly",
-                    "deviation"),
-                default="dummy")
-            private$..standardize <- jmvcore::OptionBool$new(
-                "standardize",
-                standardize,
-                default=FALSE)
+            private$..varOptions <- jmvcore::OptionArray$new(
+                "varOptions",
+                varOptions,
+                items="(vars)",
+                template=jmvcore::OptionGroup$new(
+                    "varOptions",
+                    NULL,
+                    elements=list(
+                        jmvcore::OptionList$new(
+                            "coding",
+                            NULL,
+                            options=list(
+                                "dummy",
+                                "simple",
+                                "deviation",
+                                "poly",
+                                "helmert",
+                                "revhelmert",
+                                "forward",
+                                "backward"),
+                            default="dummy"),
+                        jmvcore::OptionLevel$new(
+                            "refLevel",
+                            NULL,
+                            variable="(key)"),
+                        jmvcore::OptionBool$new(
+                            "standardize",
+                            NULL,
+                            default=FALSE))))
             private$..outputCols <- jmvcore::OptionOutput$new(
                 "outputCols")
 
             self$.addOption(private$..vars)
-            self$.addOption(private$..coding)
-            self$.addOption(private$..standardize)
+            self$.addOption(private$..varOptions)
             self$.addOption(private$..outputCols)
         }),
     active = list(
         vars = function() private$..vars$value,
-        coding = function() private$..coding$value,
-        standardize = function() private$..standardize$value,
+        varOptions = function() private$..varOptions$value,
         outputCols = function() private$..outputCols$value),
     private = list(
         ..vars = NA,
-        ..coding = NA,
-        ..standardize = NA,
+        ..varOptions = NA,
         ..outputCols = NA)
 )
 
@@ -61,6 +73,7 @@ supercodeResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     "supercodeResults",
     inherit = jmvcore::Group,
     active = list(
+        preview = function() private$.items[["preview"]],
         outputCols = function() private$.items[["outputCols"]]),
     private = list(),
     public=list(
@@ -69,6 +82,11 @@ supercodeResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 options=options,
                 name="",
                 title="Super Code")
+            self$add(jmvcore::Html$new(
+                options=options,
+                name="preview",
+                title="Contrast Matrix Preview",
+                visible=TRUE))
             self$add(jmvcore::Output$new(
                 options=options,
                 name="outputCols",
@@ -101,10 +119,10 @@ supercodeBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' 
 #' @param data .
 #' @param vars .
-#' @param coding .
-#' @param standardize .
+#' @param varOptions .
 #' @return A results object containing:
 #' \tabular{llllll}{
+#'   \code{results$preview} \tab \tab \tab \tab \tab a html \cr
 #'   \code{results$outputCols} \tab \tab \tab \tab \tab an output \cr
 #' }
 #'
@@ -112,8 +130,7 @@ supercodeBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 supercode <- function(
     data,
     vars,
-    coding = "dummy",
-    standardize = FALSE) {
+    varOptions) {
 
     if ( ! requireNamespace("jmvcore", quietly=TRUE))
         stop("supercode requires jmvcore to be installed (restart may be required)")
@@ -128,8 +145,7 @@ supercode <- function(
 
     options <- supercodeOptions$new(
         vars = vars,
-        coding = coding,
-        standardize = standardize)
+        varOptions = varOptions)
 
     analysis <- supercodeClass$new(
         options = options,

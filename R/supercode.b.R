@@ -2,66 +2,140 @@ supercodeClass <- R6::R6Class(
   "supercodeClass",
   inherit = supercodeBase,
   private = list(
-    .run = function() {
-      vars   <- self$options$vars
-      coding <- self$options$coding
-      stdz   <- self$options$standardize
 
+    .run = function() {
+      vars <- self$options$vars
       if (length(vars) == 0) return()
 
-      keys <- c()
-      titles <- c()
-      mtypes <- c()
-      allvals <- list()
+      varOpts   <- self$options$varOptions
+      keys_out  <- c()
+      titles_out <- c()
+      mtypes    <- c()
+      allvals   <- list()
+      html_parts <- c()
 
-      for (v in vars) {
-        col  <- self$data[[v]]
-        fac  <- as.factor(col)
+      for (i in seq_along(vars)) {
+        v      <- vars[[i]]
+        opts   <- varOpts[[i]]
+        coding <- opts$coding
+        stdz   <- opts$standardize
+        ref    <- opts$refLevel
+
+        col <- self$data[[v]]
+        fac <- as.factor(col)
+
         lvls <- levels(fac)
-        k    <- length(lvls)
+        if (!is.null(ref) && ref %in% lvls) {
+          lvls <- c(ref, setdiff(lvls, ref))
+          fac  <- factor(fac, levels = lvls)
+        }
+
+        k  <- length(lvls)
         if (k < 2) next
 
-        cm <- switch(coding,
-          dummy     = contr.treatment(k),
-          helmert   = contr.helmert(k),
-          poly      = contr.poly(k),
-          deviation = contr.sum(k)
-        )
+        cm <- private$.buildCM(coding, k)
 
         coded <- cm[as.integer(fac), , drop = FALSE]
+        if (stdz) coded <- scale(coded)
 
-        if (stdz) {
-          coded <- scale(coded)
+        suffix <- coding
+        col_keys <- paste0(v, "_", suffix, seq_len(k - 1))
+
+        for (j in seq_len(k - 1)) {
+          keys_out   <- c(keys_out, col_keys[j])
+          titles_out <- c(titles_out, paste0(v, " [", suffix, j, "]"))
+          mtypes     <- c(mtypes, "continuous")
+          allvals[[col_keys[j]]] <- as.numeric(coded[, j])
         }
 
-        suffix <- switch(coding,
-          dummy     = "dum",
-          helmert   = "helm",
-          poly      = "poly",
-          deviation = "dev"
-        )
-
-        for (i in seq_len(k - 1)) {
-          key <- paste0(v, "_", suffix, i)
-          keys   <- c(keys, key)
-          titles <- c(titles, paste0(v, " [", suffix, i, "]"))
-          mtypes <- c(mtypes, "continuous")
-          allvals[[key]] <- as.numeric(coded[, i])
-        }
+        html_parts <- c(html_parts,
+          private$.buildPreviewHtml(v, coding, lvls, cm))
       }
 
-      if (length(keys) == 0) return()
+      self$results$preview$setContent(
+        paste(html_parts, collapse = "<hr/>"))
+
+      if (length(keys_out) == 0) return()
 
       self$results$outputCols$set(
-        keys         = keys,
-        titles       = titles,
-        descriptions = titles,
+        keys         = keys_out,
+        titles       = titles_out,
+        descriptions = titles_out,
         measureTypes = mtypes
       )
-
-      for (i in seq_along(keys)) {
-        self$results$outputCols$setValues(index = i, allvals[[keys[i]]])
+      for (i in seq_along(keys_out)) {
+        self$results$outputCols$setValues(
+          index  = i,
+          allvals[[keys_out[i]]])
       }
+    },
+
+    .buildCM = function(coding, k) {
+      switch(coding,
+        dummy = {
+          contr.treatment(k)
+        },
+        simple = {
+          c_mat      <- contr.treatment(k)
+          my_coding  <- matrix(rep(1/k, k * (k-1)), ncol = k-1)
+          c_mat - my_coding
+        },
+        deviation = {
+          contr.sum(k)
+        },
+        poly = {
+          contr.poly(k)
+        },
+        helmert = {
+          m <- matrix(0, nrow = k, ncol = k-1)
+          for (j in seq_len(k-1)) {
+            m[j, j]          <-  (k - j) / (k - j + 1)
+            m[(j+1):k, j]    <- -1 / (k - j + 1)
+          }
+          m
+        },
+        revhelmert = {
+          contr.helmert(k)
+        },
+        forward = {
+          m <- matrix(0, nrow = k, ncol = k-1)
+          for (j in seq_len(k-1)) {
+            m[1:j, j]        <-  (k - j) / k
+            m[(j+1):k, j]    <- -j / k
+          }
+          m
+        },
+        backward = {
+          m <- matrix(0, nrow = k, ncol = k-1)
+          for (j in seq_len(k-1)) {
+            m[1:j, j]        <- -( k - j) / k
+            m[(j+1):k, j]    <-  j / k
+          }
+          m
+        }
+      )
+    },
+
+    .buildPreviewHtml = function(varName, coding, lvls, cm) {
+      k    <- length(lvls)
+      cols <- paste0(coding, seq_len(k-1))
+
+      header <- paste0(
+        "<th>Level</th>",
+        paste(sprintf("<th>%s</th>", cols), collapse = ""))
+
+      rows <- vapply(seq_len(k), function(i) {
+        cells <- paste(sprintf("<td>%.3f</td>", cm[i, ]), collapse = "")
+        sprintf("<tr><td><b>%s</b></td>%s</tr>", lvls[i], cells)
+      }, character(1))
+
+      sprintf(
+        "<p><b>%s</b> &mdash; %s</p>
+         <table border='1' cellpadding='4' style='border-collapse:collapse'>
+           <thead><tr>%s</tr></thead>
+           <tbody>%s</tbody>
+         </table>",
+        varName, coding, header, paste(rows, collapse = ""))
     }
   )
 )

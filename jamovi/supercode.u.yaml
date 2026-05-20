@@ -9,20 +9,34 @@ children:
     stretchFactor: 1
     children:
       - type: TargetLayoutBox
-        label: Variables (Nominal / Ordinal)
+        label: Variables
         children:
           - type: VariablesListBox
             name: vars
             isTarget: true
+      - type: TargetLayoutBox
+        label: ''
+        children:
+          - type: ListBox
+            name: varOptions
+            showColumnHeaders: false
+            fullRowSelect: true
+            stretchFactor: 1
+            columns:
+              - name: coding
+                stretchFactor: 1
+                template:
+                  type: ComboBox
+              - name: refLevel
+                stretchFactor: 1
+                template:
+                  type: LevelSelector
+              - name: standardize
+                stretchFactor: 1
+                template:
+                  type: CheckBox
   - type: LayoutBox
     margin: large
     children:
-      - type: ComboBox
-        name: coding
-  - type: LayoutBox
-    margin: large
-    children:
-      - type: CheckBox
-        name: standardize
       - type: Output
         name: outputCols
