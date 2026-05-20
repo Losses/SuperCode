@@ -27,19 +27,20 @@ children:
         showColumnHeaders: true
         fullRowSelect: false
         stretchFactor: 1
+        height: large
         events:
           change: ./supercode.events::onChange_varOptions
         columns:
-          - name: var
+          - name: Variable
             stretchFactor: 1
             template:
               type: VariableLabel
-          - name: coding
+          - name: Coding
             stretchFactor: 1
             template:
               type: ComboBox
               label: ''
-          - name: ref
+          - name: Reference Level
             stretchFactor: 1
             template:
               type: LevelSelector
@@ -47,7 +48,10 @@ children:
               enable: >-
                 (coding == "dummy" or coding == "simple" or coding ==
                 "deviation")
-          - name: standardize
+              enable: >-
+                (coding == "dummy" or coding == "simple" or coding ==
+                "deviation")
+          - name: Standardize
             stretchFactor: 0.5
             template:
               type: CheckBox
