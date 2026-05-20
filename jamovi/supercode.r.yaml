@@ -6,8 +6,12 @@ jrs: '1.1'
 items:
   - name: preview
     title: Contrast Matrix Preview
-    type: Html
-    visible: true
+    type: Array
+    items: (vars)
+    template:
+      title: Contrast Matrix - $key
+      type: Table
+      columns: []
 
   - name: outputCols
     title: Coded Columns

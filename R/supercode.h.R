@@ -93,11 +93,15 @@ supercodeResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 options=options,
                 name="",
                 title="Super Code")
-            self$add(jmvcore::Html$new(
+            self$add(jmvcore::Array$new(
                 options=options,
                 name="preview",
                 title="Contrast Matrix Preview",
-                visible=TRUE))
+                items="(vars)",
+                template=jmvcore::Table$new(
+                    options=options,
+                    title="Contrast Matrix - $key",
+                    columns=list())))
             self$add(jmvcore::Output$new(
                 options=options,
                 name="outputCols",
@@ -134,7 +138,7 @@ supercodeBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' @param runButton .
 #' @return A results object containing:
 #' \tabular{llllll}{
-#'   \code{results$preview} \tab \tab \tab \tab \tab a html \cr
+#'   \code{results$preview} \tab \tab \tab \tab \tab an array of tables \cr
 #'   \code{results$outputCols} \tab \tab \tab \tab \tab an output \cr
 #' }
 #'

@@ -260,28 +260,6 @@ supercodeClass <- R6::R6Class(
         a <- tmp
       }
       a
-    },
-
-    .buildPreviewHtml = function(varName, coding, lvls, cm) {
-      k    <- length(lvls)
-      cols <- paste0(coding, seq_len(k-1))
-
-      header <- paste0(
-        "<th>Level</th>",
-        paste(sprintf("<th>%s</th>", cols), collapse = ""))
-
-      rows <- vapply(seq_len(k), function(i) {
-        cells <- paste(sprintf("<td>%.3f</td>", cm[i, ]), collapse = "")
-        sprintf("<tr><td><b>%s</b></td>%s</tr>", lvls[i], cells)
-      }, character(1))
-
-      sprintf(
-        "<p><b>%s</b> (%s)</p>
-         <table>
-           <thead><tr>%s</tr></thead>
-           <tbody>%s</tbody>
-         </table>",
-        varName, coding, header, paste(rows, collapse = ""))
     }
   )
 )
