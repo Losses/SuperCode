@@ -48,9 +48,6 @@ children:
               enable: >-
                 (coding == "dummy" or coding == "simple" or coding ==
                 "deviation")
-              enable: >-
-                (coding == "dummy" or coding == "simple" or coding ==
-                "deviation")
           - name: Standardize
             stretchFactor: 0.5
             template:
