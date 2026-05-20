@@ -1,14 +1,37 @@
+const REF_LEVEL_CODINGS = new Set(["dummy", "simple", "deviation"]);
+
 const events = {
     update: function(ui) {
-        updateVarOptions(ui, this);
+        updateVarOptions(ui);
     },
 
     onChange_vars: function(ui) {
-        updateVarOptions(ui, this);
+        updateVarOptions(ui);
+    },
+
+    onChange_varOptions: function(ui) {
+        updateVarOptions(ui);
     }
 };
 
-function updateVarOptions(ui, context) {
+function supportsReferenceLevel(coding) {
+    return REF_LEVEL_CODINGS.has(coding);
+}
+
+function normalizeVarOption(option, varName) {
+    let coding = option && option.coding ? option.coding : "dummy";
+    let ref = supportsReferenceLevel(coding) && option && option.ref ? option.ref : "";
+    let standardize = option && option.standardize === true;
+
+    return {
+        var: varName,
+        coding: coding,
+        ref: ref,
+        standardize: standardize
+    };
+}
+
+function updateVarOptions(ui) {
     var varsVal = ui.vars.value();
     var varsList = Array.isArray(varsVal) ? [...varsVal] : [];
 
@@ -26,18 +49,23 @@ function updateVarOptions(ui, context) {
                 break;
             }
         }
-        if (found === null) {
-            newList.push({
-                var: varName,
-                coding: "dummy",
-                ref: "",
-                standardize: false
-            });
-        } else {
-            newList.push(found);
-        }
+
+        newList.push(normalizeVarOption(found, varName));
     }
-    ui.varOptions.setValue(newList);
+
+    if (JSON.stringify(currentList) !== JSON.stringify(newList))
+        ui.varOptions.setValue(newList);
+
+    updateLevelControls(ui);
+}
+
+function updateLevelControls(ui) {
+    let dlist = ui.varOptions.value();
+
+    ui.varOptions.applyToItems(0, (item, index, column) => {
+        if (column === 2)
+            item.setPropertyValue('variable', dlist[index].var);
+    });
 }
 
 module.exports = events;

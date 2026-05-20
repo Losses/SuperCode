@@ -25,8 +25,10 @@ children:
       - type: ListBox
         name: varOptions
         showColumnHeaders: true
-        fullRowSelect: true
+        fullRowSelect: false
         stretchFactor: 1
+        events:
+          change: ./supercode.events::onChange_varOptions
         columns:
           - name: var
             stretchFactor: 1

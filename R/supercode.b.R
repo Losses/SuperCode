@@ -32,12 +32,13 @@ supercodeClass <- R6::R6Class(
         fac <- as.factor(col)
 
         lvls <- levels(fac)
-        if (!is.null(ref) && ref != "" && ref %in% lvls) {
+        usesRef <- coding %in% c("dummy", "simple", "deviation")
+        if (usesRef && !is.null(ref) && ref != "" && ref %in% lvls) {
           if (coding == "deviation") {
             # Deviation uses the last level as the reference level
             lvls <- c(setdiff(lvls, ref), ref)
           } else {
-            # Dummy, Simple, and Helmert/Difference codings put the reference/first level first
+            # Dummy and Simple use the selected level as the first/reference level
             lvls <- c(ref, setdiff(lvls, ref))
           }
           fac  <- factor(fac, levels = lvls)
@@ -66,7 +67,7 @@ supercodeClass <- R6::R6Class(
       }
 
       self$results$preview$setContent(
-        paste(html_parts, collapse = "<hr/>"))
+        paste(html_parts, collapse = ""))
 
       if (self$options$runButton) {
         if (length(keys_out) == 0) return()
@@ -146,8 +147,8 @@ supercodeClass <- R6::R6Class(
       }, character(1))
 
       sprintf(
-        "<p><b>%s</b>(%s)</p>
-         <table border='1' cellpadding='4' style='border-collapse:collapse'>
+        "<p><b>%s</b> (%s)</p>
+         <table>
            <thead><tr>%s</tr></thead>
            <tbody>%s</tbody>
          </table>",

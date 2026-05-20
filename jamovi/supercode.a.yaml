@@ -56,8 +56,7 @@ options:
           title: Reference Level
           type: Level
           description: >
-            Used by Dummy, Simple, and Deviation.
-            For Helmert/Difference codings, determines level ordering.
+            Used by Dummy, Simple, and Deviation codings.
 
         - name: standardize
           title: Standardize
