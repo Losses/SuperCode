@@ -1,12 +1,11 @@
 Package: SuperCode
 Type: Package
-Title: What the Package Does (Title Case)
-Version: 0.0.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Title: Contrast Coding and Preview Tool for Jamovi
+Version: 0.0.1
+Author: Losses Don
+Maintainer: LOSSES Don <1384036+Losses@users.noreply.github.com>
+Description: An interactive jamovi module designed to generate, preview, and append contrast-coded columns directly to the active dataset. Supports various coding schemes including Dummy, Simple, Deviation, Helmert, Reverse Helmert, Forward, and Backward Difference coding, with options for custom reference levels and optional standardization. Provides a visual, transposed preview of the contrast matrix along with clear semantic descriptions of the mathematical comparisons executed by each contrast.
+License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true
 Imports: jmvcore (>= 0.8.5), R6
