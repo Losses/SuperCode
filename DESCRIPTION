@@ -1,10 +1,10 @@
 Package: SuperCode
 Type: Package
-Title: Contrast Coding and Preview Tool for Jamovi
+Title: Categorical Variables Coding Tool
 Version: 0.0.1
 Author: Losses Don
 Maintainer: LOSSES Don <1384036+Losses@users.noreply.github.com>
-Description: An interactive jamovi module designed to generate, preview, and append contrast-coded columns directly to the active dataset. Supports various coding schemes including Dummy, Simple, Deviation, Helmert, Reverse Helmert, Forward, and Backward Difference coding, with options for custom reference levels and optional standardization. Provides a visual, transposed preview of the contrast matrix along with clear semantic descriptions of the mathematical comparisons executed by each contrast.
+Description: An interactive jamovi module designed to generate, preview, and append coded columns directly to the active dataset. Supports various coding schemes including Dummy, Simple, Deviation, Helmert, Reverse Helmert, Forward, and Backward Difference coding, with options for custom reference levels and optional standardization. Provides a visual, transposed preview of the contrast matrix along with clear semantic descriptions of the mathematical comparisons executed by each code.
 License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true

@@ -1,16 +1,15 @@
 ---
-title: What the Package Does (Title Case)
-name: SuperCode
-version: 0.0.0
-jms: '1.0'
+title: Categorical Variables Coding Tool
+name: Super Code
+version: 0.0.1
+jms: "1.0"
 authors:
-  - Who wrote it
-maintainer: The package maintainer <yourself@somewhere.net>
-date: '1970-01-01'
+  - Losses Don
+maintainer: LOSSES Don <1384036+Losses@users.noreply.github.com>
+date: 2026-05-20
 type: R
 description: >-
-  More about what it does (maybe more than one line) Use four spaces when
-  indenting paragraphs within the Description.
+  An interactive jamovi module designed to generate, preview, and append coded columns directly to the active dataset. Supports various coding schemes including Dummy, Simple, Deviation, Helmert, Reverse Helmert, Forward, and Backward Difference coding, with options for custom reference levels and optional standardization. Provides a visual, transposed preview of the contrast matrix along with clear semantic descriptions of the mathematical comparisons executed by each code.
 analyses:
   - title: Super Code
     name: supercode
@@ -18,7 +17,6 @@ analyses:
     category: analyses
     menuGroup: SuperCode
     menuTitle: Super Code
-usesNative: true
+usesNative: false
 minApp: 1.0.8
-
 ...
