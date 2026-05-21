@@ -118,6 +118,17 @@ supercodeClass <- R6::R6Class(
       allvals   <- list()
       tables    <- self$results$preview
 
+      current_keys <- NULL
+      if (!is.null(self$results$outputCols)) {
+        current_keys <- self$results$outputCols$.__enclos_env__$private$.keys
+      }
+      if (is.null(current_keys)) {
+        current_keys <- character()
+      } else {
+        current_keys <- as.character(current_keys)
+      }
+      other_columns <- setdiff(names(self$data), current_keys)
+
       for (i in seq_along(vars)) {
         v      <- vars[[i]]
         if (! v %in% names(self$data)) next
@@ -176,7 +187,7 @@ supercodeClass <- R6::R6Class(
         counter <- 1
         while (TRUE) {
           col_keys <- paste0(v, ".c", seq_len(k - 1), suffix_str)
-          if (!any(col_keys %in% names(self$data))) {
+          if (!any(col_keys %in% other_columns)) {
             break
           }
           counter <- counter + 1

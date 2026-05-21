@@ -4,9 +4,7 @@ const INTEGER_ONLY_CODINGS = new Set(["dummy", "deviation", "poly"]); // 整数 
 const events = {
     update: function(ui) {
         try {
-            if (ui && ui._loaded) {
-                updateVarOptions(ui);
-            }
+            updateVarOptions(ui);
             updateOutputButton(ui);
         } catch (e) {
             console.error("Error in update:", e);
@@ -15,10 +13,7 @@ const events = {
 
     view_updated: function(ui) {
         try {
-            if (ui) {
-                ui._loaded = true;
-                updateVarOptions(ui);
-            }
+            updateVarOptions(ui);
             updateOutputButton(ui);
         } catch (e) {
             console.error("Error in view_updated:", e);
@@ -27,10 +22,7 @@ const events = {
 
     onChange_vars: function(ui) {
         try {
-            if (ui) {
-                ui._loaded = true;
-                updateVarOptions(ui);
-            }
+            updateVarOptions(ui);
             updateOutputButton(ui);
         } catch (e) {
             console.error("Error in onChange_vars:", e);
@@ -39,10 +31,7 @@ const events = {
 
     onChange_varOptions: function(ui) {
         try {
-            if (ui) {
-                ui._loaded = true;
-                updateVarOptions(ui);
-            }
+            updateVarOptions(ui);
             updateOutputButton(ui);
         } catch (e) {
             console.error("Error in onChange_varOptions:", e);
@@ -96,6 +85,18 @@ function varOptionsAreEqual(list1, list2) {
             o1.ref !== o2.ref ||
             o1.standardize !== o2.standardize ||
             o1.integerize !== o2.integerize) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function varOptionsAreInSync(varsList, varOptionsList) {
+    if (!Array.isArray(varsList) || !Array.isArray(varOptionsList)) return false;
+    if (varsList.length !== varOptionsList.length) return false;
+    for (let i = 0; i < varsList.length; i++) {
+        const item = varOptionsList[i];
+        if (!item || item.var !== varsList[i]) {
             return false;
         }
     }
@@ -198,6 +199,10 @@ function updateVarOptions(ui) {
     const varsList    = Array.isArray(ui.vars.value())       ? [...ui.vars.value()]       : [];
     const currentList = Array.isArray(ui.varOptions.value()) ? [...ui.varOptions.value()] : [];
 
+    if (!varOptionsAreInSync(varsList, currentList)) {
+        return;
+    }
+
     const prevSnapshot = ui._lastVarOptionsSnapshot || null;
 
     const newList = varsList.map(varName => {
@@ -206,8 +211,9 @@ function updateVarOptions(ui) {
         return normalizeVarOption(found, varName, prev);
     });
 
-    if (!varOptionsAreEqual(currentList, newList))
+    if (!varOptionsAreEqual(currentList, newList)) {
         ui.varOptions.setValue(newList);
+    }
 
     ui._lastVarOptionsSnapshot = newList.map(item => ({ ...item }));
 
