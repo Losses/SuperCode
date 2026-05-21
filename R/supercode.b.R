@@ -57,7 +57,7 @@ supercodeClass <- R6::R6Class(
         table$setTitle(paste0("<strong>", v, "</strong>", " · ", codingName))
 
         # Add Comparison/Contrast column
-        table$addColumn(name = "contrast", title = "Comparison", type = "text")
+        table$addColumn(name = "contrast", title = "", type = "text")
 
         # Add Description column
         table$addColumn(name = "description", title = "Contrast / Comparison Task", type = "text")
@@ -75,7 +75,7 @@ supercodeClass <- R6::R6Class(
         # Add rows
         for (rowIdx in seq_len(k - 1)) {
           table$addRow(rowKey = rowIdx, values = list(
-            contrast = paste0(coding, rowIdx),
+            contrast = as.character(rowIdx),
             description = labels[rowIdx]
           ))
         }
@@ -109,6 +109,7 @@ supercodeClass <- R6::R6Class(
       varOpts   <- self$options$varOptions
       keys_out  <- c()
       titles_out <- c()
+      descs_out <- c()
       mtypes    <- c()
       allvals   <- list()
       tables    <- self$results$preview
@@ -163,11 +164,12 @@ supercodeClass <- R6::R6Class(
         if (stdz) coded <- scale(coded)
 
         suffix <- coding
-        col_keys <- paste0(v, "_", suffix, seq_len(k - 1))
+        col_keys <- paste0(v, ".c", seq_len(k - 1))
 
         for (j in seq_len(k - 1)) {
           keys_out   <- c(keys_out, col_keys[j])
-          titles_out <- c(titles_out, paste0(v, " [", suffix, j, "]"))
+          titles_out <- c(titles_out, col_keys[j])
+          descs_out  <- c(descs_out, paste0(v, " [", suffix, j, "]"))
           mtypes     <- c(mtypes, "continuous")
           allvals[[col_keys[j]]] <- as.numeric(coded[, j])
         }
@@ -179,7 +181,7 @@ supercodeClass <- R6::R6Class(
         self$results$outputCols$set(
           keys         = keys_out,
           titles       = titles_out,
-          descriptions = titles_out,
+          descriptions = descs_out,
           measureTypes = mtypes
         )
         self$results$outputCols$setRowNums(rownames(self$data))
