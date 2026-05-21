@@ -62,6 +62,16 @@ children:
             template:
               type: CheckBox
               label: ''
+          - name: integerize
+            label: Int.
+            stretchFactor: 0.25
+            selectable: false
+            template:
+              type: CheckBox
+              label: ''
+              enable: >-
+                (coding == "simple" or coding == "helmert" or coding == "revhelmert"
+                or coding == "forward" or coding == "backward")
   - type: LayoutBox
     margin: large
     children:

@@ -54,6 +54,10 @@ supercodeOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                         jmvcore::OptionBool$new(
                             "standardize",
                             NULL,
+                            default=FALSE),
+                        jmvcore::OptionBool$new(
+                            "integerize",
+                            NULL,
                             default=FALSE))))
             private$..outputCols <- jmvcore::OptionOutput$new(
                 "outputCols")

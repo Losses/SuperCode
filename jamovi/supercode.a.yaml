@@ -63,6 +63,11 @@ options:
           type: Bool
           default: false
 
+        - name: integerize
+          title: Integerize
+          type: Bool
+          default: false 
+
   - name: outputCols
     title: Add Columns
     type: Output

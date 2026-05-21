@@ -14,13 +14,11 @@ supercodeClass <- R6::R6Class(
         v      <- vars[[i]]
         opts   <- if (v %in% names(varOpts)) varOpts[[v]] else varOpts[[i]]
         
-        if (is.null(opts)) {
-          coding <- "dummy"
-          ref    <- NULL
-        } else {
-          coding <- if (is.null(opts$coding)) "dummy" else opts$coding
-          ref    <- opts$ref
-        }
+        o <- private$.readOpts(opts)
+        coding     <- o$coding
+        stdz       <- o$stdz
+        integerize <- o$integerize
+        ref        <- o$ref
 
         col <- self$data[[v]]
         fac <- as.factor(col)
@@ -42,21 +40,21 @@ supercodeClass <- R6::R6Class(
 
         # Mapping for full coding names in table titles
         codingNames <- list(
-          dummy = "Dummy (Treatment)",
-          simple = "Simple",
-          deviation = "Deviation (Sum)",
-          poly = "Orthogonal Polynomial",
-          helmert = "Helmert",
-          revhelmert = "Reverse Helmert",
-          forward = "Forward Difference",
-          backward = "Backward Difference"
+          dummy = "Dummy (Treatment) Coding",
+          simple = "Simple Coding",
+          deviation = "Deviation (Sum) Coding",
+          poly = "Orthogonal Polynomial Coding",
+          helmert = "Helmert Coding",
+          revhelmert = "Reverse Helmert Coding",
+          forward = "Forward Difference Coding",
+          backward = "Backward Difference Coding"
         )
         codingName <- codingNames[[coding]]
         if (is.null(codingName))
           codingName <- coding
 
         # Set title dynamically to include coding name
-        table$setTitle(paste0(v, " (", codingName, ")"))
+        table$setTitle(paste0("<strong>", v, "</strong>", " · ", codingName))
 
         # Add Comparison/Contrast column
         table$addColumn(name = "contrast", title = "Comparison", type = "text")
@@ -81,7 +79,27 @@ supercodeClass <- R6::R6Class(
             description = labels[rowIdx]
           ))
         }
+
+        # Clear any legacy footnotes
+        table$setNote(key = "focus", note = NULL)
+        table$setNote(key = "beta", note = NULL)
+        table$setNote(key = "intercept", note = NULL)
+
+        # Set footnote explaining focus, beta interpretation, and intercept in a single formatted block
+        noteText <- private$.getFootnoteText(coding, integerize, stdz)
+        table$setNote(key = "explanation", note = noteText)
       }
+    },
+
+    .readOpts = function(opts) {
+      if (is.null(opts)) {
+        return(list(coding = "dummy", stdz = FALSE, integerize = FALSE, ref = NULL))
+      }
+      coding     <- if (is.null(opts$coding)) "dummy" else opts$coding
+      stdz       <- isTRUE(opts$standardize)
+      integerize <- isTRUE(opts$integerize)
+      if (stdz && integerize) integerize <- FALSE
+      list(coding = coding, stdz = stdz, integerize = integerize, ref = opts$ref)
     },
 
     .run = function() {
@@ -99,15 +117,11 @@ supercodeClass <- R6::R6Class(
         v      <- vars[[i]]
         opts   <- if (v %in% names(varOpts)) varOpts[[v]] else varOpts[[i]]
         
-        if (is.null(opts)) {
-          coding <- "dummy"
-          stdz   <- FALSE
-          ref    <- NULL
-        } else {
-          coding <- if (is.null(opts$coding)) "dummy" else opts$coding
-          stdz   <- if (is.null(opts$standardize)) FALSE else opts$standardize
-          ref    <- opts$ref
-        }
+        o <- private$.readOpts(opts)
+        coding     <- o$coding
+        stdz       <- o$stdz
+        integerize <- o$integerize
+        ref        <- o$ref
 
         col <- self$data[[v]]
         fac <- as.factor(col)
@@ -128,7 +142,7 @@ supercodeClass <- R6::R6Class(
         k  <- length(lvls)
         if (k < 2) next
 
-        cm <- private$.buildCM(coding, k)
+        cm <- private$.buildCM(coding, k, integerize = integerize)
         preview_cm <- cm
         if (stdz)
           preview_cm <- scale(preview_cm)
@@ -241,40 +255,128 @@ supercodeClass <- R6::R6Class(
       labels
     },
 
-    .buildCM = function(coding, k) {
+    .getFootnoteText = function(coding, integerize, standardize) {
+
+      intro <- switch(coding,
+        dummy = paste0(
+          "Each contrast tests one level against a single reference level. R's default scheme."
+        ),
+        simple = paste0(
+          "Same per-level comparisons as dummy, but the intercept is the grand mean rather than the reference mean."
+        ),
+        deviation = paste0(
+          "Each contrast tests one level against the grand mean of all groups."
+        ),
+        poly = paste0(
+          "Each contrast tests for a specific polynomial trend across ordered, evenly spaced levels."
+        ),
+        helmert = paste0(
+          "Each contrast tests one level against the mean of all levels that come after it."
+        ),
+        revhelmert = paste0(
+          "Each contrast tests one level against the mean of all levels that come before it."
+        ),
+        forward = paste0(
+          "Each contrast tests one level against the next adjacent level."
+        ),
+        backward = paste0(
+          "Each contrast tests one level against the previous adjacent level."
+        ),
+        ""
+      )
+
+      if (standardize) {
+        interp <- paste0(
+          "Each contrast column has been z-scored, so betas express change in Y per one ",
+          "standard deviation of the contrast column. They are no longer raw mean differences."
+        )
+      } else if (integerize || coding %in% c("dummy", "deviation", "poly")) {
+        interp <- switch(coding,
+          dummy = paste0(
+            "The intercept is the reference group's mean. ",
+            "Each beta is this level's mean minus the reference mean."
+          ),
+          simple = paste0(
+            "Using the integer matrix common in textbooks. ",
+            "The intercept is the grand mean. ",
+            "Each beta is (this level's mean minus the reference mean) divided by k, the number of levels."
+          ),
+          deviation = paste0(
+            "The intercept is the grand mean. ",
+            "Each beta is this level's mean minus the grand mean."
+          ),
+          poly = paste0(
+            "The intercept is the grand mean. ",
+            "Each beta is the coefficient of one polynomial term (linear, quadratic, cubic, and so on). ",
+            "Sign and significance are interpretable; magnitude depends on how the contrast column is scaled."
+          ),
+          helmert = paste0(
+            "Using the integer matrix common in textbooks. ",
+            "The intercept is the grand mean. ",
+            "The j-th beta is (mean of level j minus mean of all subsequent levels) divided by (k − j + 1)."
+          ),
+          revhelmert = paste0(
+            "Using the integer matrix common in textbooks. ",
+            "The intercept is the grand mean. ",
+            "The j-th beta is (mean of level j+1 minus mean of all prior levels) divided by (j + 1)."
+          ),
+          forward = paste0(
+            "Using the integer matrix common in textbooks. ",
+            "The intercept is the grand mean. ",
+            "The j-th beta is (mean of level j minus mean of level j+1) divided by k."
+          ),
+          backward = paste0(
+            "Using the integer matrix common in textbooks. ",
+            "The intercept is the grand mean. ",
+            "The j-th beta is (mean of level j+1 minus mean of level j) divided by k."
+          )
+        )
+      } else {
+        interp <- switch(coding,
+          simple = paste0(
+            "The intercept is the grand mean. ",
+            "Each beta is this level's mean minus the reference mean."
+          ),
+          helmert = paste0(
+            "The intercept is the grand mean. ",
+            "The j-th beta is the mean of level j minus the mean of all subsequent levels."
+          ),
+          revhelmert = paste0(
+            "The intercept is the grand mean. ",
+            "The j-th beta is the mean of level j+1 minus the mean of all prior levels."
+          ),
+          forward = paste0(
+            "The intercept is the grand mean. ",
+            "The j-th beta is the mean of level j minus the mean of level j+1."
+          ),
+          backward = paste0(
+            "The intercept is the grand mean. ",
+            "The j-th beta is the mean of level j+1 minus the mean of level j."
+          )
+        )
+      }
+
+      paste(intro, interp)
+    },
+
+    .buildCM = function(coding, k, integerize = FALSE) {
       switch(coding,
-        dummy = {
-          contr.treatment(k)
-        },
-        simple = {
-          private$.buildRawSimpleCM(k)
-        },
-        deviation = {
-          contr.sum(k)
-        },
-        poly = {
-          private$.buildRawPolyCM(k)
-        },
-        helmert = {
-          private$.buildRawHelmertCM(k)
-        },
-        revhelmert = {
-          private$.buildRawRevHelmertCM(k)
-        },
-        forward = {
-          private$.buildRawForwardCM(k)
-        },
-        backward = {
-          private$.buildRawBackwardCM(k)
-        }
+        dummy      = contr.treatment(k),
+        deviation  = contr.sum(k),
+        poly       = private$.buildIntegerPolyCM(k),
+        simple     = if (integerize) private$.buildIntegerSimpleCM(k)     else private$.buildCleanSimpleCM(k),
+        helmert    = if (integerize) private$.buildIntegerHelmertCM(k)    else private$.buildCleanHelmertCM(k),
+        revhelmert = if (integerize) private$.buildIntegerRevHelmertCM(k) else private$.buildCleanRevHelmertCM(k),
+        forward    = if (integerize) private$.buildIntegerForwardCM(k)    else private$.buildCleanForwardCM(k),
+        backward   = if (integerize) private$.buildIntegerBackwardCM(k)   else private$.buildCleanBackwardCM(k)
       )
     },
 
-    .buildRawSimpleCM = function(k) {
+    .buildIntegerSimpleCM = function(k) {
       k * contr.treatment(k) - 1
     },
 
-    .buildRawPolyCM = function(k) {
+    .buildIntegerPolyCM = function(k) {
       x <- seq_len(k)
       powers <- sapply(seq_len(k - 1), function(degree) x ^ degree)
 
@@ -303,7 +405,7 @@ supercodeClass <- R6::R6Class(
       raw
     },
 
-    .buildRawHelmertCM = function(k) {
+    .buildIntegerHelmertCM = function(k) {
       m <- matrix(0, nrow = k, ncol = k - 1)
       for (j in seq_len(k - 1)) {
         m[j, j] <- k - j
@@ -312,7 +414,7 @@ supercodeClass <- R6::R6Class(
       m
     },
 
-    .buildRawRevHelmertCM = function(k) {
+    .buildIntegerRevHelmertCM = function(k) {
       m <- matrix(0, nrow = k, ncol = k - 1)
       for (j in seq_len(k - 1)) {
         m[1:j, j] <- -1
@@ -321,7 +423,7 @@ supercodeClass <- R6::R6Class(
       m
     },
 
-    .buildRawForwardCM = function(k) {
+    .buildIntegerForwardCM = function(k) {
       m <- matrix(0, nrow = k, ncol = k - 1)
       for (j in seq_len(k - 1)) {
         m[1:j, j] <- k - j
@@ -330,13 +432,49 @@ supercodeClass <- R6::R6Class(
       m
     },
 
-    .buildRawBackwardCM = function(k) {
+    .buildIntegerBackwardCM = function(k) {
       m <- matrix(0, nrow = k, ncol = k - 1)
       for (j in seq_len(k - 1)) {
         m[1:j, j] <- -(k - j)
         m[(j + 1):k, j] <- j
       }
       m
+    },
+
+    .buildCleanSimpleCM = function(k) {
+      contr.treatment(k) - 1 / k
+    },
+
+    .buildCleanHelmertCM = function(k) {
+      m <- matrix(0, nrow = k, ncol = k - 1)
+      for (j in seq_len(k - 1)) {
+        n_sub          <- k - j
+        m[j, j]        <- n_sub / (n_sub + 1)
+        m[(j + 1):k, j] <- -1 / (n_sub + 1)
+      }
+      m
+    },
+
+    .buildCleanRevHelmertCM = function(k) {
+      m <- matrix(0, nrow = k, ncol = k - 1)
+      for (j in seq_len(k - 1)) {
+        m[1:j, j]    <- -1 / (j + 1)
+        m[j + 1, j]  <-  j / (j + 1)
+      }
+      m
+    },
+
+    .buildCleanForwardCM = function(k) {
+      m <- matrix(0, nrow = k, ncol = k - 1)
+      for (j in seq_len(k - 1)) {
+        m[1:j, j]       <-  (k - j) / k
+        m[(j + 1):k, j] <- -j / k
+      }
+      m
+    },
+
+    .buildCleanBackwardCM = function(k) {
+      -1 * private$.buildCleanForwardCM(k)
     },
 
     .gcd = function(a, b) {

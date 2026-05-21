@@ -1,4 +1,7 @@
 const REF_LEVEL_CODINGS = new Set(["dummy", "simple", "deviation"]);
+const INTEGER_ONLY_CODINGS = new Set(["dummy", "deviation", "poly"]); // 整数 == 干净，Int 无意义
+
+let lastVarOptionsSnapshot = null;
 
 const events = {
     update: function(ui) {
@@ -25,17 +28,34 @@ function supportsReferenceLevel(coding) {
     return REF_LEVEL_CODINGS.has(coding);
 }
 
-function normalizeVarOption(option, varName) {
-    let coding = option && option.coding ? option.coding : "dummy";
-    let ref = supportsReferenceLevel(coding) && option && option.ref ? option.ref : "";
-    let standardize = option && option.standardize === true;
+function supportsIntegerize(coding)     {
+    return !INTEGER_ONLY_CODINGS.has(coding);
+}
 
-    return {
-        var: varName,
-        coding: coding,
-        ref: ref,
-        standardize: standardize
-    };
+function findByVar(list, varName) {
+    if (!Array.isArray(list)) return null;
+    for (const item of list) if (item.var === varName) return item;
+    return null;
+}
+
+function normalizeVarOption(option, varName, prev) {
+    let coding      = option && option.coding ? option.coding : "dummy";
+    let ref         = supportsReferenceLevel(coding) && option && option.ref ? option.ref : "";
+    let standardize = !!(option && option.standardize === true);
+    let integerize  = !!(option && option.integerize  === true);
+
+    if (!supportsIntegerize(coding))
+        integerize = false;
+
+    if (standardize && integerize) {
+        const prevStd = !!(prev && prev.standardize === true);
+        const prevInt = !!(prev && prev.integerize  === true);
+        if      (prevStd && !prevInt) standardize = false;
+        else if (prevInt && !prevStd) integerize  = false;
+        else                          integerize  = false;
+    }
+
+    return { var: varName, coding, ref, standardize, integerize };
 }
 
 function ensureOutputButtonStyles() {
@@ -121,46 +141,40 @@ function applyOutputButtonState(label, text, checked, disabled) {
 }
 
 function updateVarOptions(ui) {
-    var varsVal = ui.vars.value();
-    var varsList = Array.isArray(varsVal) ? [...varsVal] : [];
+    const varsList    = Array.isArray(ui.vars.value())       ? [...ui.vars.value()]       : [];
+    const currentList = Array.isArray(ui.varOptions.value()) ? [...ui.varOptions.value()] : [];
 
-    var optsVal = ui.varOptions.value();
-    var currentList = Array.isArray(optsVal) ? [...optsVal] : [];
-
-    var newList = [];
-
-    for (let i = 0; i < varsList.length; i++) {
-        let varName = varsList[i];
-        let found = null;
-        for (let j = 0; j < currentList.length; j++) {
-            if (currentList[j].var === varName) {
-                found = currentList[j];
-                break;
-            }
-        }
-
-        newList.push(normalizeVarOption(found, varName));
-    }
+    const newList = varsList.map(varName => {
+        const found = findByVar(currentList, varName);
+        const prev  = findByVar(lastVarOptionsSnapshot, varName);
+        return normalizeVarOption(found, varName, prev);
+    });
 
     if (JSON.stringify(currentList) !== JSON.stringify(newList))
         ui.varOptions.setValue(newList);
+
+    lastVarOptionsSnapshot = newList.map(item => ({ ...item }));
 
     updateLevelControls(ui);
 }
 
 function updateLevelControls(ui) {
-    let dlist = ui.varOptions.value();
+    const dlist = ui.varOptions.value();
+    if (!Array.isArray(dlist)) return;
 
     ui.varOptions.applyToItems(0, (item, index, column) => {
-        if (column === 2) {
-            let row = dlist[index] || {};
-            let enabled = supportsReferenceLevel(row.coding);
+        const row = dlist[index] || {};
 
+        if (column === 2) {
+            const enabled = supportsReferenceLevel(row.coding);
             item.setPropertyValue('variable', row.var);
             item.setPropertyValue('enable', enabled);
-
-            if (item.input)
-                item.input.disabled = !enabled;
+            if (item.input) item.input.disabled = !enabled;
+        }
+        else if (column === 4) {
+            const enabled = supportsIntegerize(row.coding);
+            item.setPropertyValue('enable', enabled);
+            if (item.input) item.input.disabled = !enabled;
         }
     });
 }
