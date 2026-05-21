@@ -12,7 +12,7 @@ supercodeClass <- R6::R6Class(
 
       for (i in seq_along(vars)) {
         v      <- vars[[i]]
-        opts   <- if (v %in% names(varOpts)) varOpts[[v]] else varOpts[[i]]
+        opts   <- private$.findOpts(v, varOpts)
         
         o <- private$.readOpts(opts)
         coding     <- o$coding
@@ -116,7 +116,7 @@ supercodeClass <- R6::R6Class(
 
       for (i in seq_along(vars)) {
         v      <- vars[[i]]
-        opts   <- if (v %in% names(varOpts)) varOpts[[v]] else varOpts[[i]]
+        opts   <- private$.findOpts(v, varOpts)
         
         o <- private$.readOpts(opts)
         coding     <- o$coding
@@ -190,6 +190,13 @@ supercodeClass <- R6::R6Class(
             index  = i,
             values = allvals[[keys_out[i]]])
         }
+      } else {
+        self$results$outputCols$set(
+          keys         = character(),
+          titles       = character(),
+          descriptions = character(),
+          measureTypes = character()
+        )
       }
     },
 
@@ -488,6 +495,16 @@ supercodeClass <- R6::R6Class(
         a <- tmp
       }
       a
+    },
+
+    .findOpts = function(varName, varOpts) {
+      if (is.null(varOpts)) return(NULL)
+      for (opts in varOpts) {
+        if (!is.null(opts$var) && opts$var == varName) {
+          return(opts)
+        }
+      }
+      return(NULL)
     }
   )
 )

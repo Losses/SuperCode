@@ -1,8 +1,6 @@
 const REF_LEVEL_CODINGS = new Set(["dummy", "simple", "deviation"]);
 const INTEGER_ONLY_CODINGS = new Set(["dummy", "deviation", "poly"]); // 整数 == 干净，Int 无意义
 
-let lastVarOptionsSnapshot = null;
-
 const events = {
     update: function(ui) {
         updateVarOptions(ui);
@@ -56,6 +54,24 @@ function normalizeVarOption(option, varName, prev) {
     }
 
     return { var: varName, coding, ref, standardize, integerize };
+}
+
+function varOptionsAreEqual(list1, list2) {
+    if (!Array.isArray(list1) || !Array.isArray(list2)) return false;
+    if (list1.length !== list2.length) return false;
+    for (let i = 0; i < list1.length; i++) {
+        const o1 = list1[i];
+        const o2 = list2[i];
+        if (!o1 || !o2) return false;
+        if (o1.var !== o2.var ||
+            o1.coding !== o2.coding ||
+            o1.ref !== o2.ref ||
+            o1.standardize !== o2.standardize ||
+            o1.integerize !== o2.integerize) {
+            return false;
+        }
+    }
+    return true;
 }
 
 function ensureOutputButtonStyles() {
@@ -144,16 +160,18 @@ function updateVarOptions(ui) {
     const varsList    = Array.isArray(ui.vars.value())       ? [...ui.vars.value()]       : [];
     const currentList = Array.isArray(ui.varOptions.value()) ? [...ui.varOptions.value()] : [];
 
+    const prevSnapshot = ui._lastVarOptionsSnapshot || null;
+
     const newList = varsList.map(varName => {
         const found = findByVar(currentList, varName);
-        const prev  = findByVar(lastVarOptionsSnapshot, varName);
+        const prev  = findByVar(prevSnapshot, varName);
         return normalizeVarOption(found, varName, prev);
     });
 
-    if (JSON.stringify(currentList) !== JSON.stringify(newList))
+    if (!varOptionsAreEqual(currentList, newList))
         ui.varOptions.setValue(newList);
 
-    lastVarOptionsSnapshot = newList.map(item => ({ ...item }));
+    ui._lastVarOptionsSnapshot = newList.map(item => ({ ...item }));
 
     updateLevelControls(ui);
 }
