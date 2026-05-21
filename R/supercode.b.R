@@ -6,21 +6,24 @@ supercodeClass <- R6::R6Class(
     .init = function() {
       vars <- self$options$vars
       if (length(vars) == 0) return()
+      if (is.null(self$data)) return()
 
       varOpts   <- self$options$varOptions
       tables    <- self$results$preview
 
       for (i in seq_along(vars)) {
         v      <- vars[[i]]
-        opts   <- private$.findOpts(v, varOpts)
+        if (! v %in% names(self$data)) next
+        col <- self$data[[v]]
+        if (is.null(col)) next
         
+        opts   <- private$.findOpts(v, varOpts)
         o <- private$.readOpts(opts)
         coding     <- o$coding
         stdz       <- o$stdz
         integerize <- o$integerize
         ref        <- o$ref
 
-        col <- self$data[[v]]
         fac <- as.factor(col)
         lvls <- levels(fac)
         
@@ -105,6 +108,7 @@ supercodeClass <- R6::R6Class(
     .run = function() {
       vars <- self$options$vars
       if (length(vars) == 0) return()
+      if (is.null(self$data)) return()
 
       varOpts   <- self$options$varOptions
       keys_out  <- c()
@@ -116,6 +120,10 @@ supercodeClass <- R6::R6Class(
 
       for (i in seq_along(vars)) {
         v      <- vars[[i]]
+        if (! v %in% names(self$data)) next
+        col <- self$data[[v]]
+        if (is.null(col)) next
+
         opts   <- private$.findOpts(v, varOpts)
         
         o <- private$.readOpts(opts)
@@ -163,13 +171,22 @@ supercodeClass <- R6::R6Class(
         coded <- cm[as.integer(fac), , drop = FALSE]
         if (stdz) coded <- scale(coded)
 
-        suffix <- coding
-        col_keys <- paste0(v, ".c", seq_len(k - 1))
+        # Find a collision-free suffix for this variable
+        suffix_str <- ""
+        counter <- 1
+        while (TRUE) {
+          col_keys <- paste0(v, ".c", seq_len(k - 1), suffix_str)
+          if (!any(col_keys %in% names(self$data))) {
+            break
+          }
+          counter <- counter + 1
+          suffix_str <- paste0("_", counter)
+        }
 
         for (j in seq_len(k - 1)) {
           keys_out   <- c(keys_out, col_keys[j])
           titles_out <- c(titles_out, col_keys[j])
-          descs_out  <- c(descs_out, paste0(v, " [", suffix, j, "]"))
+          descs_out  <- c(descs_out, paste0(v, " [", coding, j, "]"))
           mtypes     <- c(mtypes, "continuous")
           allvals[[col_keys[j]]] <- as.numeric(coded[, j])
         }

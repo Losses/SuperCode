@@ -3,22 +3,50 @@ const INTEGER_ONLY_CODINGS = new Set(["dummy", "deviation", "poly"]); // 整数 
 
 const events = {
     update: function(ui) {
-        updateVarOptions(ui);
-        updateOutputButton(ui);
+        try {
+            if (ui && ui._loaded) {
+                updateVarOptions(ui);
+            }
+            updateOutputButton(ui);
+        } catch (e) {
+            console.error("Error in update:", e);
+        }
     },
 
     view_updated: function(ui) {
-        updateOutputButton(ui);
+        try {
+            if (ui) {
+                ui._loaded = true;
+                updateVarOptions(ui);
+            }
+            updateOutputButton(ui);
+        } catch (e) {
+            console.error("Error in view_updated:", e);
+        }
     },
 
     onChange_vars: function(ui) {
-        updateVarOptions(ui);
-        updateOutputButton(ui);
+        try {
+            if (ui) {
+                ui._loaded = true;
+                updateVarOptions(ui);
+            }
+            updateOutputButton(ui);
+        } catch (e) {
+            console.error("Error in onChange_vars:", e);
+        }
     },
 
     onChange_varOptions: function(ui) {
-        updateVarOptions(ui);
-        updateOutputButton(ui);
+        try {
+            if (ui) {
+                ui._loaded = true;
+                updateVarOptions(ui);
+            }
+            updateOutputButton(ui);
+        } catch (e) {
+            console.error("Error in onChange_varOptions:", e);
+        }
     }
 };
 
@@ -111,17 +139,26 @@ function ensureOutputButtonStyles() {
 }
 
 function updateOutputButton(ui) {
-    let control = ui.outputCols;
-    if (!control)
+    if (!ui || !ui.outputCols)
         return;
+    let control = ui.outputCols;
 
     let root = control.el || control._subel;
     if (!root)
         return;
 
-    let input = control.input || root.querySelector('input[type="checkbox"]');
-    let text = control.label || root.querySelector('span');
-    let label = text ? text.parentElement : root.querySelector('label');
+    let input = control.input;
+    if (!input && typeof root.querySelector === 'function') {
+        input = root.querySelector('input[type="checkbox"]');
+    }
+    let text = control.label;
+    if (!text && typeof root.querySelector === 'function') {
+        text = root.querySelector('span');
+    }
+    let label = text ? text.parentElement : null;
+    if (!label && typeof root.querySelector === 'function') {
+        label = root.querySelector('label');
+    }
 
     if (!input || !text || !label)
         return;
@@ -157,6 +194,7 @@ function applyOutputButtonState(label, text, checked, disabled) {
 }
 
 function updateVarOptions(ui) {
+    if (!ui || !ui.vars || !ui.varOptions) return;
     const varsList    = Array.isArray(ui.vars.value())       ? [...ui.vars.value()]       : [];
     const currentList = Array.isArray(ui.varOptions.value()) ? [...ui.varOptions.value()] : [];
 
@@ -177,10 +215,14 @@ function updateVarOptions(ui) {
 }
 
 function updateLevelControls(ui) {
+    if (!ui || !ui.varOptions) return;
     const dlist = ui.varOptions.value();
     if (!Array.isArray(dlist)) return;
 
+    if (typeof ui.varOptions.applyToItems !== 'function') return;
+
     ui.varOptions.applyToItems(0, (item, index, column) => {
+        if (!item) return;
         const row = dlist[index] || {};
 
         if (column === 2) {
