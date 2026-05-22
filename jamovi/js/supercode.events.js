@@ -4,7 +4,8 @@ const INTEGER_ONLY_CODINGS = new Set(["dummy", "deviation", "poly"]); // 整数 
 const events = {
     update: function(ui) {
         try {
-            updateVarOptions(ui);
+            ui._lastVarOptions = (ui.varOptions.value() || []).map(item => ({ ...item }));
+            updateLevelControls(ui);
             updateOutputButton(ui);
         } catch (e) {
             console.error("Error in update:", e);
@@ -13,7 +14,8 @@ const events = {
 
     view_updated: function(ui) {
         try {
-            updateVarOptions(ui);
+            ui._lastVarOptions = (ui.varOptions.value() || []).map(item => ({ ...item }));
+            updateLevelControls(ui);
             updateOutputButton(ui);
         } catch (e) {
             console.error("Error in view_updated:", e);
@@ -22,7 +24,9 @@ const events = {
 
     onChange_vars: function(ui) {
         try {
-            updateVarOptions(ui);
+            // Jamovi handles option synchronization natively, so we just
+            // update controls and output button here.
+            updateLevelControls(ui);
             updateOutputButton(ui);
         } catch (e) {
             console.error("Error in onChange_vars:", e);
@@ -31,10 +35,18 @@ const events = {
 
     onChange_varOptions: function(ui) {
         try {
-            updateVarOptions(ui);
+            runOnChangeVarOptions(ui);
             updateOutputButton(ui);
         } catch (e) {
             console.error("Error in onChange_varOptions:", e);
+        }
+    },
+
+    onChange_outputCols: function(ui) {
+        try {
+            updateOutputButton(ui);
+        } catch (e) {
+            console.error("Error in onChange_outputCols:", e);
         }
     }
 };
@@ -47,60 +59,90 @@ function supportsIntegerize(coding)     {
     return !INTEGER_ONLY_CODINGS.has(coding);
 }
 
-function findByVar(list, varName) {
-    if (!Array.isArray(list)) return null;
-    for (const item of list) if (item.var === varName) return item;
-    return null;
-}
+function runOnChangeVarOptions(ui) {
+    const currentList = ui.varOptions.value() || [];
+    const lastList = ui._lastVarOptions || [];
 
-function normalizeVarOption(option, varName, prev) {
-    let coding      = option && option.coding ? option.coding : "dummy";
-    let ref         = supportsReferenceLevel(coding) && option && option.ref ? option.ref : "";
-    let standardize = !!(option && option.standardize === true);
-    let integerize  = !!(option && option.integerize  === true);
+    let changed = false;
+    const newList = currentList.map((item, idx) => {
+        if (!item) return item;
+        const lastItem = lastList[idx] || {};
 
-    if (!supportsIntegerize(coding))
-        integerize = false;
+        let coding = item.coding || "dummy";
+        let ref = item.ref;
+        let standardize = !!item.standardize;
+        let integerize = !!item.integerize;
 
-    if (standardize && integerize) {
-        const prevStd = !!(prev && prev.standardize === true);
-        const prevInt = !!(prev && prev.integerize  === true);
-        if      (prevStd && !prevInt) standardize = false;
-        else if (prevInt && !prevStd) integerize  = false;
-        else                          integerize  = false;
-    }
-
-    return { var: varName, coding, ref, standardize, integerize };
-}
-
-function varOptionsAreEqual(list1, list2) {
-    if (!Array.isArray(list1) || !Array.isArray(list2)) return false;
-    if (list1.length !== list2.length) return false;
-    for (let i = 0; i < list1.length; i++) {
-        const o1 = list1[i];
-        const o2 = list2[i];
-        if (!o1 || !o2) return false;
-        if (o1.var !== o2.var ||
-            o1.coding !== o2.coding ||
-            o1.ref !== o2.ref ||
-            o1.standardize !== o2.standardize ||
-            o1.integerize !== o2.integerize) {
-            return false;
+        // Clean ref if coding changed to something not supporting it
+        if (!supportsReferenceLevel(coding)) {
+            ref = null;
         }
+
+        // Clean integerize if coding changed to something not supporting it
+        if (!supportsIntegerize(coding)) {
+            integerize = false;
+        }
+
+        // Mutual exclusivity check
+        if (standardize && integerize) {
+            const lastStd = !!lastItem.standardize;
+            const lastInt = !!lastItem.integerize;
+
+            if (standardize !== lastStd && integerize === lastInt) {
+                // standardize became true, uncheck integerize
+                integerize = false;
+            } else if (integerize !== lastInt && standardize === lastStd) {
+                // integerize became true, uncheck standardize
+                standardize = false;
+            } else {
+                // fallback
+                integerize = false;
+            }
+        }
+
+        if (coding !== item.coding ||
+            ref !== item.ref ||
+            standardize !== item.standardize ||
+            integerize !== item.integerize) {
+            changed = true;
+            return { var: item.var, coding, ref, standardize, integerize };
+        }
+        return item;
+    });
+
+    if (changed) {
+        ui.varOptions.setValue(newList);
+        ui._lastVarOptions = newList.map(item => ({ ...item }));
+    } else {
+        ui._lastVarOptions = currentList.map(item => ({ ...item }));
     }
-    return true;
+
+    updateLevelControls(ui);
 }
 
-function varOptionsAreInSync(varsList, varOptionsList) {
-    if (!Array.isArray(varsList) || !Array.isArray(varOptionsList)) return false;
-    if (varsList.length !== varOptionsList.length) return false;
-    for (let i = 0; i < varsList.length; i++) {
-        const item = varOptionsList[i];
-        if (!item || item.var !== varsList[i]) {
-            return false;
+function updateLevelControls(ui) {
+    if (!ui || !ui.varOptions) return;
+    const dlist = ui.varOptions.value();
+    if (!Array.isArray(dlist)) return;
+
+    if (typeof ui.varOptions.applyToItems !== 'function') return;
+
+    ui.varOptions.applyToItems(0, (item, index, column) => {
+        if (!item) return;
+        const row = dlist[index] || {};
+
+        if (column === 2) {
+            const enabled = supportsReferenceLevel(row.coding);
+            item.setPropertyValue('variable', row.var);
+            item.setPropertyValue('enable', enabled);
+            if (item.input) item.input.disabled = !enabled;
         }
-    }
-    return true;
+        else if (column === 4) {
+            const enabled = supportsIntegerize(row.coding);
+            item.setPropertyValue('enable', enabled);
+            if (item.input) item.input.disabled = !enabled;
+        }
+    });
 }
 
 function ensureOutputButtonStyles() {
@@ -165,7 +207,7 @@ function updateOutputButton(ui) {
         return;
 
     ensureOutputButtonStyles();
-    bindOutputButtonEvents(ui, input);
+    bindOutputButtonEvents(ui, control, label, input);
 
     input.style.position = 'absolute';
     input.style.opacity = '0';
@@ -177,72 +219,27 @@ function updateOutputButton(ui) {
     label.classList.add('jmv-action-button', 'supercode-output-button');
     label.style.cursor = input.disabled ? 'default' : 'pointer';
 
-    applyOutputButtonState(label, text, input.checked, input.disabled);
+    applyOutputButtonState(label, text, control.value() === true, input.disabled);
 }
 
-function bindOutputButtonEvents(ui, input) {
-    if (input.dataset.supercodeButtonBound === 'true')
+function bindOutputButtonEvents(ui, control, label, input) {
+    if (label.dataset.supercodeButtonBound === 'true')
         return;
 
-    input.dataset.supercodeButtonBound = 'true';
-    input.addEventListener('change', () => updateOutputButton(ui));
+    label.dataset.supercodeButtonBound = 'true';
+    label.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (input.disabled) return;
+        const currentVal = control.value() === true;
+        control.setValue(!currentVal);
+    });
 }
 
 function applyOutputButtonState(label, text, checked, disabled) {
     text.textContent = checked ? 'Remove Columns' : 'Add Columns';
     label.classList.toggle('supercode-output-remove', checked && !disabled);
     label.classList.toggle('supercode-output-disabled', disabled);
-}
-
-function updateVarOptions(ui) {
-    if (!ui || !ui.vars || !ui.varOptions) return;
-    const varsList    = Array.isArray(ui.vars.value())       ? [...ui.vars.value()]       : [];
-    const currentList = Array.isArray(ui.varOptions.value()) ? [...ui.varOptions.value()] : [];
-
-    if (!varOptionsAreInSync(varsList, currentList)) {
-        return;
-    }
-
-    const prevSnapshot = ui._lastVarOptionsSnapshot || null;
-
-    const newList = varsList.map(varName => {
-        const found = findByVar(currentList, varName);
-        const prev  = findByVar(prevSnapshot, varName);
-        return normalizeVarOption(found, varName, prev);
-    });
-
-    if (!varOptionsAreEqual(currentList, newList)) {
-        ui.varOptions.setValue(newList);
-    }
-
-    ui._lastVarOptionsSnapshot = newList.map(item => ({ ...item }));
-
-    updateLevelControls(ui);
-}
-
-function updateLevelControls(ui) {
-    if (!ui || !ui.varOptions) return;
-    const dlist = ui.varOptions.value();
-    if (!Array.isArray(dlist)) return;
-
-    if (typeof ui.varOptions.applyToItems !== 'function') return;
-
-    ui.varOptions.applyToItems(0, (item, index, column) => {
-        if (!item) return;
-        const row = dlist[index] || {};
-
-        if (column === 2) {
-            const enabled = supportsReferenceLevel(row.coding);
-            item.setPropertyValue('variable', row.var);
-            item.setPropertyValue('enable', enabled);
-            if (item.input) item.input.disabled = !enabled;
-        }
-        else if (column === 4) {
-            const enabled = supportsIntegerize(row.coding);
-            item.setPropertyValue('enable', enabled);
-            if (item.input) item.input.disabled = !enabled;
-        }
-    });
 }
 
 module.exports = events;

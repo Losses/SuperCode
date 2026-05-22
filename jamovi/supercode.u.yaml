@@ -77,3 +77,5 @@ children:
     children:
       - type: Output
         name: outputCols
+        events:
+          change: ./supercode.events::onChange_outputCols
