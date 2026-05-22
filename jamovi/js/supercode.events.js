@@ -4,6 +4,7 @@ const INTEGER_ONLY_CODINGS = new Set(["dummy", "deviation", "poly"]); // 整数 
 const events = {
     update: function(ui) {
         try {
+            synchronizeVarOptions(ui);
             ui._lastVarOptions = (ui.varOptions.value() || []).map(item => ({ ...item }));
             updateLevelControls(ui);
             updateOutputButton(ui);
@@ -14,6 +15,7 @@ const events = {
 
     onChange_vars: function(ui) {
         try {
+            synchronizeVarOptions(ui);
             updateLevelControls(ui);
             updateOutputButton(ui);
         } catch (e) {
@@ -48,6 +50,50 @@ function supportsReferenceLevel(coding) {
 
 function supportsIntegerize(coding)     {
     return !INTEGER_ONLY_CODINGS.has(coding);
+}
+
+function synchronizeVarOptions(ui) {
+    if (!ui || !ui.vars || !ui.varOptions) return;
+
+    const vars = ui.vars.value() || [];
+    const currentList = ui.varOptions.value() || [];
+
+    let changed = false;
+    const newList = [];
+
+    for (let i = 0; i < vars.length; i++) {
+        const v = vars[i];
+        let found = null;
+        for (let j = 0; j < currentList.length; j++) {
+            if (currentList[j] && currentList[j].var === v) {
+                found = currentList[j];
+                break;
+            }
+        }
+        if (found === null) {
+            newList.push({
+                var: v,
+                coding: "dummy",
+                ref: null,
+                standardize: false,
+                integerize: false
+            });
+            changed = true;
+        } else {
+            newList.push(found);
+        }
+    }
+
+    if (newList.length !== currentList.length) {
+        changed = true;
+    }
+
+    if (changed) {
+        ui.varOptions.setValue(newList);
+        ui._lastVarOptions = newList.map(item => ({ ...item }));
+    } else {
+        ui._lastVarOptions = currentList.map(item => ({ ...item }));
+    }
 }
 
 function runOnChangeVarOptions(ui) {
