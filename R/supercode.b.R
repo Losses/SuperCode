@@ -204,7 +204,15 @@ supercodeClass <- R6::R6Class(
       }
 
       if (self$options$outputCols) {
-        if (length(keys_out) == 0) return()
+        if (length(keys_out) == 0) {
+          self$results$outputCols$set(
+            keys         = character(),
+            titles       = character(),
+            descriptions = character(),
+            measureTypes = character()
+          )
+          return()
+        }
 
         self$results$outputCols$set(
           keys         = keys_out,
@@ -212,12 +220,8 @@ supercodeClass <- R6::R6Class(
           descriptions = descs_out,
           measureTypes = mtypes
         )
-        self$results$outputCols$setRowNums(rownames(self$data))
-        for (i in seq_along(keys_out)) {
-          self$results$outputCols$setValues(
-            index  = i,
-            values = allvals[[keys_out[i]]])
-        }
+        pdf <- data.frame(allvals, check.names = FALSE, row.names = rownames(self$data))
+        self$results$outputCols$setValues(pdf)
       } else {
         self$results$outputCols$set(
           keys         = character(),

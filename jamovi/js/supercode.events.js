@@ -4,6 +4,7 @@ const INTEGER_ONLY_CODINGS = new Set(["dummy", "deviation", "poly"]); // 整数 
 const events = {
     update: function(ui) {
         try {
+            if (!ui._initialized) return;
             ui._lastVarOptions = (ui.varOptions.value() || []).map(item => ({ ...item }));
             updateLevelControls(ui);
             updateOutputButton(ui);
@@ -14,7 +15,8 @@ const events = {
 
     view_updated: function(ui) {
         try {
-            ui._lastVarOptions = (ui.varOptions.value() || []).map(item => ({ ...item }));
+            ui._initialized = true;
+            synchronizeVarOptions(ui);
             updateLevelControls(ui);
             updateOutputButton(ui);
         } catch (e) {
@@ -24,8 +26,8 @@ const events = {
 
     onChange_vars: function(ui) {
         try {
-            // Jamovi handles option synchronization natively, so we just
-            // update controls and output button here.
+            if (!ui._initialized) return;
+            synchronizeVarOptions(ui);
             updateLevelControls(ui);
             updateOutputButton(ui);
         } catch (e) {
@@ -35,6 +37,7 @@ const events = {
 
     onChange_varOptions: function(ui) {
         try {
+            if (!ui._initialized) return;
             runOnChangeVarOptions(ui);
             updateOutputButton(ui);
         } catch (e) {
@@ -44,6 +47,7 @@ const events = {
 
     onChange_outputCols: function(ui) {
         try {
+            if (!ui._initialized) return;
             updateOutputButton(ui);
         } catch (e) {
             console.error("Error in onChange_outputCols:", e);
@@ -57,6 +61,50 @@ function supportsReferenceLevel(coding) {
 
 function supportsIntegerize(coding)     {
     return !INTEGER_ONLY_CODINGS.has(coding);
+}
+
+function synchronizeVarOptions(ui) {
+    if (!ui || !ui.vars || !ui.varOptions) return;
+
+    const vars = ui.vars.value() || [];
+    const currentList = ui.varOptions.value() || [];
+
+    let changed = false;
+    const newList = [];
+
+    for (let i = 0; i < vars.length; i++) {
+        const v = vars[i];
+        let found = null;
+        for (let j = 0; j < currentList.length; j++) {
+            if (currentList[j] && currentList[j].var === v) {
+                found = currentList[j];
+                break;
+            }
+        }
+        if (found === null) {
+            newList.push({
+                var: v,
+                coding: "dummy",
+                ref: null,
+                standardize: false,
+                integerize: false
+            });
+            changed = true;
+        } else {
+            newList.push(found);
+        }
+    }
+
+    if (newList.length !== currentList.length) {
+        changed = true;
+    }
+
+    if (changed) {
+        ui.varOptions.setValue(newList);
+        ui._lastVarOptions = newList.map(item => ({ ...item }));
+    } else {
+        ui._lastVarOptions = currentList.map(item => ({ ...item }));
+    }
 }
 
 function runOnChangeVarOptions(ui) {
