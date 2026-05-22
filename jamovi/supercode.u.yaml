@@ -52,9 +52,6 @@ children:
               type: LevelSelector
               label: ''
               variable: var
-              enable: >-
-                (coding == "dummy" or coding == "simple" or coding ==
-                "deviation")
           - name: standardize
             label: Std.
             stretchFactor: 0.25
@@ -69,8 +66,6 @@ children:
             template:
               type: CheckBox
               label: ''
-              enable: >-
-                (coding != "dummy" and coding != "deviation" and coding != "poly")
   - type: LayoutBox
     margin: large
     children:
