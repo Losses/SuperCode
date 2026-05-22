@@ -4,8 +4,7 @@ const INTEGER_ONLY_CODINGS = new Set(["dummy", "deviation", "poly"]); // 整数 
 const events = {
     update: function(ui) {
         try {
-            synchronizeVarOptions(ui);
-            ui._lastVarOptions = (ui.varOptions.value() || []).map(item => ({ ...item }));
+            this._lastVarOptions = (ui.varOptions.value() || []).map(item => ({ ...item }));
             updateLevelControls(ui);
             updateOutputButton(ui);
         } catch (e) {
@@ -15,7 +14,6 @@ const events = {
 
     onChange_vars: function(ui) {
         try {
-            synchronizeVarOptions(ui);
             updateLevelControls(ui);
             updateOutputButton(ui);
         } catch (e) {
@@ -25,10 +23,10 @@ const events = {
 
     onChange_varOptions: function(ui) {
         try {
-            if (!ui._lastVarOptions) {
-                ui._lastVarOptions = (ui.varOptions.value() || []).map(item => ({ ...item }));
+            if (!this._lastVarOptions) {
+                this._lastVarOptions = (ui.varOptions.value() || []).map(item => ({ ...item }));
             }
-            runOnChangeVarOptions(ui);
+            runOnChangeVarOptions(ui, this);
             updateOutputButton(ui);
         } catch (e) {
             console.error("Error in onChange_varOptions:", e);
@@ -52,56 +50,12 @@ function supportsIntegerize(coding)     {
     return !INTEGER_ONLY_CODINGS.has(coding);
 }
 
-function synchronizeVarOptions(ui) {
-    if (!ui || !ui.vars || !ui.varOptions) return;
-
-    const vars = ui.vars.value() || [];
+function runOnChangeVarOptions(ui, context) {
     const currentList = ui.varOptions.value() || [];
-
-    let changed = false;
-    const newList = [];
-
-    for (let i = 0; i < vars.length; i++) {
-        const v = vars[i];
-        let found = null;
-        for (let j = 0; j < currentList.length; j++) {
-            if (currentList[j] && currentList[j].var === v) {
-                found = currentList[j];
-                break;
-            }
-        }
-        if (found === null) {
-            newList.push({
-                var: v,
-                coding: "dummy",
-                ref: null,
-                standardize: false,
-                integerize: false
-            });
-            changed = true;
-        } else {
-            newList.push(found);
-        }
+    if (!context._lastVarOptions) {
+        context._lastVarOptions = currentList.map(item => ({ ...item }));
     }
-
-    if (newList.length !== currentList.length) {
-        changed = true;
-    }
-
-    if (changed) {
-        ui.varOptions.setValue(newList);
-        ui._lastVarOptions = newList.map(item => ({ ...item }));
-    } else {
-        ui._lastVarOptions = currentList.map(item => ({ ...item }));
-    }
-}
-
-function runOnChangeVarOptions(ui) {
-    const currentList = ui.varOptions.value() || [];
-    if (!ui._lastVarOptions) {
-        ui._lastVarOptions = currentList.map(item => ({ ...item }));
-    }
-    const lastList = ui._lastVarOptions;
+    const lastList = context._lastVarOptions;
 
     let changed = false;
     const newList = currentList.map((item, idx) => {
@@ -152,9 +106,9 @@ function runOnChangeVarOptions(ui) {
 
     if (changed) {
         ui.varOptions.setValue(newList);
-        ui._lastVarOptions = newList.map(item => ({ ...item }));
+        context._lastVarOptions = newList.map(item => ({ ...item }));
     } else {
-        ui._lastVarOptions = currentList.map(item => ({ ...item }));
+        context._lastVarOptions = currentList.map(item => ({ ...item }));
     }
 
     updateLevelControls(ui);
@@ -167,21 +121,21 @@ function updateLevelControls(ui) {
 
     if (typeof ui.varOptions.applyToItems !== 'function') return;
 
-    ui.varOptions.applyToItems(0, (item, index, column) => {
+    ui.varOptions.applyToItems(2, (item, index, column) => {
         if (!item) return;
         const row = dlist[index] || {};
+        const enabled = supportsReferenceLevel(row.coding);
+        item.setPropertyValue('variable', row.var);
+        item.setPropertyValue('enable', enabled);
+        if (item.input) item.input.disabled = !enabled;
+    });
 
-        if (column === 2) {
-            const enabled = supportsReferenceLevel(row.coding);
-            item.setPropertyValue('variable', row.var);
-            item.setPropertyValue('enable', enabled);
-            if (item.input) item.input.disabled = !enabled;
-        }
-        else if (column === 4) {
-            const enabled = supportsIntegerize(row.coding);
-            item.setPropertyValue('enable', enabled);
-            if (item.input) item.input.disabled = !enabled;
-        }
+    ui.varOptions.applyToItems(4, (item, index, column) => {
+        if (!item) return;
+        const row = dlist[index] || {};
+        const enabled = supportsIntegerize(row.coding);
+        item.setPropertyValue('enable', enabled);
+        if (item.input) item.input.disabled = !enabled;
     });
 }
 
