@@ -21,7 +21,8 @@ analyses:
     name: supercode
     ns: SuperCode
     category: analyses
-    menuGroup: SuperCode
+    menuGroup: Regression
+    menuSubgroup: SuperCode
     menuTitle: Coding Matrix
 usesNative: false
 minApp: 1.0.8
