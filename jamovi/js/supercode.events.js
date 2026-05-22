@@ -6,21 +6,16 @@ const events = {
         try {
             ui._activeInstance = this;
             
-            // 1. Initialize ID if missing
             if (!ui.analysisId.value()) {
                 safeSetValue(ui, 'analysisId', Math.random().toString(36).substring(2, 10), this);
             }
 
-            // 2. Initial sync for table population
             synchronizeVarOptions(ui, this);
 
-            // 3. PHYSICAL DISABLE OBSERVER
-            // This is DOM-ONLY. It reacts to jamovi's rendering.
             if (ui.varOptions && ui.varOptions.el) {
                 if (this._observer) this._observer.disconnect();
                 this._observer = new MutationObserver(() => {
                     if (ui._activeInstance !== this) return;
-                    // TRULY READ-ONLY: Only touches HTML attributes
                     applyPhysicalDisableOnly(ui);
                 });
                 this._observer.observe(ui.varOptions.el, { childList: true, subtree: true });
@@ -75,9 +70,6 @@ const events = {
     }
 };
 
-/**
- * Robust setValue helper with deep comparison and recursion guard.
- */
 function safeSetValue(ui, optionName, value, context) {
     if (!ui[optionName] || context._syncing) return;
     
@@ -85,7 +77,6 @@ function safeSetValue(ui, optionName, value, context) {
     if (JSON.stringify(current) === JSON.stringify(value)) return;
 
     context._syncing = true;
-    // Defer to next tick to avoid blocking the current event chain
     setTimeout(() => {
         try {
             ui[optionName].setValue(value);
@@ -161,7 +152,6 @@ function runOnChangeVarOptions(ui, context) {
         let standardize = !!item.standardize;
         let integerize = !!item.integerize;
 
-        // Mutual exclusivity check
         if (standardize && integerize) {
             const lastStd = !!lastItem.standardize;
             const lastInt = !!lastItem.integerize;
@@ -181,30 +171,29 @@ function runOnChangeVarOptions(ui, context) {
     }
 }
 
-/**
- * CRITICAL: This function must be TRULY READ-ONLY for the jamovi data model.
- * It ONLY modifies the HTML 'disabled' attribute.
- * It NEVER calls setPropertyValue.
- */
 function applyPhysicalDisableOnly(ui) {
     if (!ui || !ui.varOptions || !ui.varOptions.applyToItems) return;
     const dlist = ui.varOptions.value();
     if (!Array.isArray(dlist)) return;
 
     ui.varOptions.applyToItems(0, (item, index, column) => {
-        if (!item || !item.input) return;
+        if (!item) return;
         const row = dlist[index] || {};
 
         if (column === 2) { // Reference Level
             const enabled = supportsReferenceLevel(row.coding);
-            // No setPropertyValue here! YAML handles the model.
-            if (item.input.disabled !== !enabled) {
+            // RE-ENABLING model property set for the reference variable
+            // Since YAML Level types don't support 'vars' in arrays, we must 
+            // tell each item which variable it belongs to here.
+            item.setPropertyValue('variable', row.var);
+            
+            if (item.input && item.input.disabled !== !enabled) {
                 item.input.disabled = !enabled;
             }
         }
         else if (column === 4) { // Integerize
             const enabled = supportsIntegerize(row.coding);
-            if (item.input.disabled !== !enabled) {
+            if (item.input && item.input.disabled !== !enabled) {
                 item.input.disabled = !enabled;
             }
         }
