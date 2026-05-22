@@ -172,21 +172,21 @@ function updateLevelControls(ui) {
 
     if (typeof ui.varOptions.applyToItems !== 'function') return;
 
-    ui.varOptions.applyToItems(2, (item, index, column) => {
+    ui.varOptions.applyToItems(0, (item, index, column) => {
         if (!item) return;
         const row = dlist[index] || {};
-        const enabled = supportsReferenceLevel(row.coding);
-        item.setPropertyValue('variable', row.var);
-        item.setPropertyValue('enable', enabled);
-        if (item.input) item.input.disabled = !enabled;
-    });
 
-    ui.varOptions.applyToItems(4, (item, index, column) => {
-        if (!item) return;
-        const row = dlist[index] || {};
-        const enabled = supportsIntegerize(row.coding);
-        item.setPropertyValue('enable', enabled);
-        if (item.input) item.input.disabled = !enabled;
+        if (column === 2) {
+            const enabled = supportsReferenceLevel(row.coding);
+            item.setPropertyValue('variable', row.var);
+            item.setPropertyValue('enable', enabled);
+            if (item.input) item.input.disabled = !enabled;
+        }
+        else if (column === 4) {
+            const enabled = supportsIntegerize(row.coding);
+            item.setPropertyValue('enable', enabled);
+            if (item.input) item.input.disabled = !enabled;
+        }
     });
 }
 
