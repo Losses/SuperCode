@@ -177,25 +177,27 @@ supercodeClass <- R6::R6Class(
         coded <- cm[as.integer(fac), , drop = FALSE]
         if (stdz) coded <- scale(coded)
 
-        # Get analysis instance ID and prefix
-        aid <- self$options$analysisId
-        if (is.null(aid) || aid == "") aid <- "def" # Fallback
-        
         prefix <- self$options$codePrefix
         if (is.null(prefix) || is.na(prefix) || prefix == "") prefix <- "c"
 
-        # Get all column names currently in the dataset to avoid collisions
+        # Get all column titles currently in the dataset
         existing_names <- names(self$data)
         
-        # Identify all keys that belong to THIS instance using the unique analysisId
-        # We exclude these from collision checks so we don't collide with our own existing columns
-        other_names <- existing_names[!grepl(paste0("^", aid, "_"), existing_names)]
+        # Identify the titles that belong to THIS instance so we don't collide with ourselves
+        my_current_titles <- c()
+        if (!is.null(self$results$outputCols)) {
+           try({
+             my_current_titles <- self$results$outputCols$.__enclos_env__$private$.titles
+             if (is.null(my_current_titles)) my_current_titles <- character()
+           }, silent = TRUE)
+        }
+        other_names <- setdiff(existing_names, my_current_titles)
 
         for (j in seq_len(k - 1)) {
-          # Use a globally stable internal key for this instance
-          stable_key <- paste0(aid, "_", v, "_", j)
+          # Use a simple stable internal key
+          stable_key <- paste0(v, "_code_", j)
           
-          # 1. Try to maintain stability: Check if we already have a title that matches the prefix
+          # 1. Try to maintain stability: Check if we already have a title for this key
           current_title <- NULL
           if (!is.null(self$results$outputCols)) {
              try({
@@ -208,9 +210,8 @@ supercodeClass <- R6::R6Class(
           display_title <- current_title
 
           # If we don't have a title, or the current title doesn't match the new naming rule...
-          # We check if it starts with [Variable]. and contains the [Prefix] at the right spot
           expected_start <- paste0(v, ".", prefix)
-          if (is.null(display_title) || !startsWith(display_title, expected_start)) {
+          if (is.null(display_title) || !startsWith(display_title, expected_start) || display_title == "") {
             # Find a new title that doesn't collide with OTHER columns
             candidate <- base_name
             counter <- 1

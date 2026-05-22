@@ -1,14 +1,9 @@
 const REF_LEVEL_CODINGS = new Set(["dummy", "simple", "deviation"]);
-const INTEGER_ONLY_CODINGS = new Set(["dummy", "deviation", "poly"]); // 整数 == 干净，Int 无意义
+const INTEGER_ONLY_CODINGS = new Set(["dummy", "deviation", "poly"]);
 
 const events = {
     update: function(ui) {
         try {
-            if (!ui.analysisId.value()) {
-                const randomId = Math.random().toString(36).substring(2, 10);
-                ui.analysisId.setValue(randomId);
-            }
-
             synchronizeVarOptions(ui, this);
             updateLevelControls(ui);
             updateOutputButton(ui);
@@ -45,8 +40,6 @@ const events = {
     },
 
     onChange_codePrefix: function(ui) {
-        // Stable keys handle this automatically via setTitle in R.
-        // No more flickering or timeout hacks needed.
     },
 
     onChange_outputCols: function(ui) {
