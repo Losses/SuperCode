@@ -5,9 +5,28 @@ const events = {
     update: function(ui) {
         try {
             ui._activeInstance = this;
+            
+            // 1. Immediate try (might catch some cases)
             synchronizeVarOptions(ui, this);
             updateLevelControls(ui);
             updateOutputButton(ui);
+
+            // 2. Reactive catch-up: Use MutationObserver to detect when the table actually renders
+            // This is far more robust than a fixed timeout.
+            if (ui.varOptions && ui.varOptions.el) {
+                if (this._observer) this._observer.disconnect();
+                
+                this._observer = new MutationObserver(() => {
+                    if (ui._activeInstance !== this) return;
+                    updateLevelControls(ui);
+                });
+                
+                this._observer.observe(ui.varOptions.el, { 
+                    childList: true, 
+                    subtree: true 
+                });
+            }
+
             this._initialized = true;
         } catch (e) {
             console.error("Error in update:", e);
@@ -112,6 +131,7 @@ function synchronizeVarOptions(ui, context) {
             try {
                 ui.varOptions.setValue(newList);
                 context._lastVarOptions = newList.map(item => ({ ...item }));
+                updateLevelControls(ui);
             } finally {
                 context._syncing = false;
             }
@@ -200,6 +220,7 @@ function updateLevelControls(ui) {
 
         if (column === 2) { // Reference Level
             const enabled = supportsReferenceLevel(row.coding);
+            item.setPropertyValue('variable', row.var);
             item.setPropertyValue('enable', enabled);
             if (item.input) item.input.disabled = !enabled;
         }

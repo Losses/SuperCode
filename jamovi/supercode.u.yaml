@@ -51,7 +51,7 @@ children:
             template:
               type: LevelSelector
               label: ''
-              variable: $key
+              variable: var
               enable: >-
                 (coding == "dummy" or coding == "simple" or coding ==
                 "deviation")
