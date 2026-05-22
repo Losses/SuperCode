@@ -1,5 +1,5 @@
 const REF_LEVEL_CODINGS = new Set(["dummy", "simple", "deviation"]);
-const INTEGER_ONLY_CODINGS = new Set(["dummy", "deviation", "poly"]);
+const INTEGER_ONLY_CODINGS = new Set(["dummy", "deviation"]);
 
 const events = {
     update: function(ui) {

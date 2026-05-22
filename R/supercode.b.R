@@ -163,14 +163,31 @@ supercodeClass <- R6::R6Class(
         
         # Matrix-wide format check to ensure visual consistency
         is_all_int <- all(abs(preview_cm - round(preview_cm)) < 1e-10)
+        
+        # Special case: Polynomial fractions (Square Roots)
+        is_poly_frac <- (coding == "poly" && !integerize && self$options$showFractions && !stdz)
+        if (is_poly_frac)
+           poly_int_cm <- private$.buildIntegerPolyCM(k)
 
         for (rowIdx in seq_len(k - 1)) {
           rowVals <- list()
+          
+          # For poly frac, pre-calculate SS for the current contrast (column)
+          if (is_poly_frac)
+             ss_val <- sum(poly_int_cm[, rowIdx]^2)
+          
           for (j in seq_len(k)) {
             colName <- paste0("lvlCol", j)
             val <- preview_cm[j, rowIdx]
             
-            if (is_all_int) {
+            if (is_poly_frac) {
+              w <- poly_int_cm[j, rowIdx]
+              if (w == 0) {
+                val_str <- "0"
+              } else {
+                val_str <- paste0(w, "/\u221A", ss_val) # \u221A is the square root symbol √
+              }
+            } else if (is_all_int) {
               # If everything is an integer, show as clean integers
               val_str <- as.character(round(val))
             } else if (self$options$showFractions && !stdz) {
@@ -384,7 +401,7 @@ supercodeClass <- R6::R6Class(
           "Each contrast column has been z-scored, so betas express change in Y per one ",
           "standard deviation of the contrast column. They are no longer raw mean differences."
         )
-      } else if (integerize || coding %in% c("dummy", "deviation", "poly")) {
+      } else if (integerize || coding %in% c("dummy", "deviation")) {
         interp <- switch(coding,
           dummy = paste0(
             "The intercept is the reference group's mean. ",
@@ -400,6 +417,7 @@ supercodeClass <- R6::R6Class(
             "Each beta is this level's mean minus the grand mean."
           ),
           poly = paste0(
+            "Using the integer matrix common in textbooks. ",
             "The intercept is the grand mean. ",
             "Each beta is the coefficient of one polynomial term (linear, quadratic, cubic, and so on). ",
             "Sign and significance are interpretable; magnitude depends on how the contrast column is scaled."
@@ -431,6 +449,12 @@ supercodeClass <- R6::R6Class(
             "The intercept is the grand mean. ",
             "Each beta is this level's mean minus the reference mean."
           ),
+          poly = paste0(
+            "Using the orthonormal matrix (standard in R). ",
+            "The intercept is the grand mean. ",
+            "Each beta is the coefficient of one polynomial term. ",
+            "Column sums of squares are 1."
+          ),
           helmert = paste0(
             "The intercept is the grand mean. ",
             "The j-th beta is the mean of level j minus the mean of all subsequent levels."
@@ -457,7 +481,7 @@ supercodeClass <- R6::R6Class(
       switch(coding,
         dummy      = contr.treatment(k),
         deviation  = contr.sum(k),
-        poly       = private$.buildIntegerPolyCM(k),
+        poly       = if (integerize) private$.buildIntegerPolyCM(k) else contr.poly(k),
         simple     = if (integerize) private$.buildIntegerSimpleCM(k)     else private$.buildCleanSimpleCM(k),
         helmert    = if (integerize) private$.buildIntegerHelmertCM(k)    else private$.buildCleanHelmertCM(k),
         revhelmert = if (integerize) private$.buildIntegerRevHelmertCM(k) else private$.buildCleanRevHelmertCM(k),
