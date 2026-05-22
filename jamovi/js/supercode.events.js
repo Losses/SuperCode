@@ -4,9 +4,12 @@ const INTEGER_ONLY_CODINGS = new Set(["dummy", "deviation", "poly"]); // 整数 
 const events = {
     update: function(ui) {
         try {
-            this._lastVarOptions = (ui.varOptions.value() || []).map(item => ({ ...item }));
+            synchronizeVarOptions(ui, this);
             updateLevelControls(ui);
             updateOutputButton(ui);
+            
+            ui._activeInstance = this;
+            this._initialized = true;
         } catch (e) {
             console.error("Error in update:", e);
         }
@@ -14,6 +17,8 @@ const events = {
 
     onChange_vars: function(ui) {
         try {
+            if (ui._activeInstance !== this) return;
+            synchronizeVarOptions(ui, this);
             updateLevelControls(ui);
             updateOutputButton(ui);
         } catch (e) {
@@ -23,6 +28,7 @@ const events = {
 
     onChange_varOptions: function(ui) {
         try {
+            if (ui._activeInstance !== this) return;
             if (!this._lastVarOptions) {
                 this._lastVarOptions = (ui.varOptions.value() || []).map(item => ({ ...item }));
             }
@@ -35,6 +41,7 @@ const events = {
 
     onChange_outputCols: function(ui) {
         try {
+            if (ui._activeInstance !== this) return;
             updateOutputButton(ui);
         } catch (e) {
             console.error("Error in onChange_outputCols:", e);
@@ -48,6 +55,50 @@ function supportsReferenceLevel(coding) {
 
 function supportsIntegerize(coding)     {
     return !INTEGER_ONLY_CODINGS.has(coding);
+}
+
+function synchronizeVarOptions(ui, context) {
+    if (!ui || !ui.vars || !ui.varOptions) return;
+
+    const vars = ui.vars.value() || [];
+    const currentList = ui.varOptions.value() || [];
+
+    let changed = false;
+    const newList = [];
+
+    for (let i = 0; i < vars.length; i++) {
+        const v = vars[i];
+        let found = null;
+        for (let j = 0; j < currentList.length; j++) {
+            if (currentList[j] && currentList[j].var === v) {
+                found = currentList[j];
+                break;
+            }
+        }
+        if (found === null) {
+            newList.push({
+                var: v,
+                coding: "dummy",
+                ref: null,
+                standardize: false,
+                integerize: false
+            });
+            changed = true;
+        } else {
+            newList.push(found);
+        }
+    }
+
+    if (newList.length !== currentList.length) {
+        changed = true;
+    }
+
+    if (changed) {
+        ui.varOptions.setValue(newList);
+        context._lastVarOptions = newList.map(item => ({ ...item }));
+    } else {
+        context._lastVarOptions = currentList.map(item => ({ ...item }));
+    }
 }
 
 function runOnChangeVarOptions(ui, context) {
