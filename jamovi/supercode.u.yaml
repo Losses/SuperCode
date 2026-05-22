@@ -74,7 +74,14 @@ children:
   - type: LayoutBox
     margin: large
     children:
+      - type: TextBox
+        name: codePrefix
+        label: Code Prefix
+        format: string
+        events:
+          change: ./supercode.events::onChange_codePrefix
       - type: Output
         name: outputCols
         events:
           change: ./supercode.events::onChange_outputCols
+

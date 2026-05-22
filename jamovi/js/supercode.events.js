@@ -4,6 +4,11 @@ const INTEGER_ONLY_CODINGS = new Set(["dummy", "deviation", "poly"]); // 整数 
 const events = {
     update: function(ui) {
         try {
+            if (!ui.analysisId.value()) {
+                const randomId = Math.random().toString(36).substring(2, 10);
+                ui.analysisId.setValue(randomId);
+            }
+
             synchronizeVarOptions(ui, this);
             updateLevelControls(ui);
             updateOutputButton(ui);
@@ -37,6 +42,11 @@ const events = {
         } catch (e) {
             console.error("Error in onChange_varOptions:", e);
         }
+    },
+
+    onChange_codePrefix: function(ui) {
+        // Stable keys handle this automatically via setTitle in R.
+        // No more flickering or timeout hacks needed.
     },
 
     onChange_outputCols: function(ui) {

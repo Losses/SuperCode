@@ -68,6 +68,15 @@ options:
           type: Bool
           default: false 
 
+  - name: codePrefix
+    title: Code Prefix
+    type: String
+    default: c
+
+  - name: analysisId
+    type: String
+    hidden: true
+
   - name: outputCols
     title: Add Columns
     type: Output

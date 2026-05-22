@@ -7,7 +7,8 @@ supercodeOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     public = list(
         initialize = function(
             vars = NULL,
-            varOptions = NULL, ...) {
+            varOptions = NULL,
+            codePrefix = "c", ...) {
 
             super$initialize(
                 package="SuperCode",
@@ -59,20 +60,27 @@ supercodeOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                             "integerize",
                             NULL,
                             default=FALSE))))
+            private$..codePrefix <- jmvcore::OptionString$new(
+                "codePrefix",
+                codePrefix,
+                default="c")
             private$..outputCols <- jmvcore::OptionOutput$new(
                 "outputCols")
 
             self$.addOption(private$..vars)
             self$.addOption(private$..varOptions)
+            self$.addOption(private$..codePrefix)
             self$.addOption(private$..outputCols)
         }),
     active = list(
         vars = function() private$..vars$value,
         varOptions = function() private$..varOptions$value,
+        codePrefix = function() private$..codePrefix$value,
         outputCols = function() private$..outputCols$value),
     private = list(
         ..vars = NA,
         ..varOptions = NA,
+        ..codePrefix = NA,
         ..outputCols = NA)
 )
 
@@ -131,6 +139,7 @@ supercodeBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' @param data .
 #' @param vars .
 #' @param varOptions .
+#' @param codePrefix .
 #' @return A results object containing:
 #' \tabular{llllll}{
 #'   \code{results$preview} \tab \tab \tab \tab \tab an array of tables \cr
@@ -141,7 +150,8 @@ supercodeBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 supercode <- function(
     data,
     vars,
-    varOptions) {
+    varOptions,
+    codePrefix = "c") {
 
     if ( ! requireNamespace("jmvcore", quietly=TRUE))
         stop("supercode requires jmvcore to be installed (restart may be required)")
@@ -156,7 +166,8 @@ supercode <- function(
 
     options <- supercodeOptions$new(
         vars = vars,
-        varOptions = varOptions)
+        varOptions = varOptions,
+        codePrefix = codePrefix)
 
     analysis <- supercodeClass$new(
         options = options,

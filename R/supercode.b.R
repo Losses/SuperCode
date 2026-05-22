@@ -119,17 +119,6 @@ supercodeClass <- R6::R6Class(
       allvals   <- list()
       tables    <- self$results$preview
 
-      current_keys <- NULL
-      if (!is.null(self$results$outputCols)) {
-        current_keys <- self$results$outputCols$.__enclos_env__$private$.keys
-      }
-      if (is.null(current_keys)) {
-        current_keys <- character()
-      } else {
-        current_keys <- as.character(current_keys)
-      }
-      other_columns <- setdiff(names(self$data), current_keys)
-
       for (i in seq_along(vars)) {
         v      <- vars[[i]]
         if (! v %in% names(self$data)) next
@@ -188,24 +177,56 @@ supercodeClass <- R6::R6Class(
         coded <- cm[as.integer(fac), , drop = FALSE]
         if (stdz) coded <- scale(coded)
 
-        # Find a collision-free suffix for this variable
-        suffix_str <- ""
-        counter <- 1
-        while (TRUE) {
-          col_keys <- paste0(v, ".c", seq_len(k - 1), suffix_str)
-          if (!any(col_keys %in% other_columns)) {
-            break
-          }
-          counter <- counter + 1
-          suffix_str <- paste0("_", counter)
-        }
+        # Get analysis instance ID and prefix
+        aid <- self$options$analysisId
+        if (is.null(aid) || aid == "") aid <- "def" # Fallback
+        
+        prefix <- self$options$codePrefix
+        if (is.null(prefix) || is.na(prefix) || prefix == "") prefix <- "c"
+
+        # Get all column names currently in the dataset to avoid collisions
+        existing_names <- names(self$data)
+        
+        # Identify all keys that belong to THIS instance using the unique analysisId
+        # We exclude these from collision checks so we don't collide with our own existing columns
+        other_names <- existing_names[!grepl(paste0("^", aid, "_"), existing_names)]
 
         for (j in seq_len(k - 1)) {
-          keys_out   <- c(keys_out, col_keys[j])
-          titles_out <- c(titles_out, col_keys[j])
-          descs_out  <- c(descs_out, paste0(v, " [", coding, j, "]"))
+          # Use a globally stable internal key for this instance
+          stable_key <- paste0(aid, "_", v, "_", j)
+          
+          # 1. Try to maintain stability: Check if we already have a title that matches the prefix
+          current_title <- NULL
+          if (!is.null(self$results$outputCols)) {
+             try({
+               item <- self$results$outputCols$get(key = stable_key)
+               if (!is.null(item)) current_title <- item$title
+             }, silent = TRUE)
+          }
+
+          base_name <- paste0(prefix, ".", v, j)
+          display_title <- current_title
+
+          # If we don't have a title, or the current title doesn't start with the correct prefix...
+          if (is.null(display_title) || !startsWith(display_title, paste0(prefix, "."))) {
+            # Find a new title that doesn't collide with OTHER columns
+            candidate <- base_name
+            counter <- 1
+            while (candidate %in% other_names) {
+              counter <- counter + 1
+              candidate <- paste0(base_name, "_", counter)
+            }
+            display_title <- candidate
+          }
+          
+          # Add to other_names so subsequent columns in THIS run don't collide with this one
+          other_names <- c(other_names, display_title)
+
+          keys_out   <- c(keys_out, stable_key)
+          titles_out <- c(titles_out, display_title)
+          descs_out  <- c(descs_out, paste0(v, " [", coding, " contrast ", j, "]"))
           mtypes     <- c(mtypes, "continuous")
-          allvals[[col_keys[j]]] <- as.numeric(coded[, j])
+          allvals[[stable_key]] <- as.numeric(coded[, j])
         }
       }
 
