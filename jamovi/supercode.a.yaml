@@ -46,7 +46,7 @@ options:
               name: helmert
             - title: Reverse Helmert
               name: revhelmert
-            - title: Forward Difference
+            - title: Forward Difference (Repeated)
               name: forward
             - title: Backward Difference
               name: backward

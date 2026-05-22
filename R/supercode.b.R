@@ -50,7 +50,7 @@ supercodeClass <- R6::R6Class(
           poly = "Orthogonal Polynomial Coding",
           helmert = "Helmert Coding",
           revhelmert = "Reverse Helmert Coding",
-          forward = "Forward Difference Coding",
+          forward = "Forward Difference (Repeated) Coding",
           backward = "Backward Difference Coding"
         )
         codingName <- codingNames[[coding]]
