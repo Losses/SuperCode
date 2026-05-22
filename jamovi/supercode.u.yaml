@@ -69,6 +69,10 @@ children:
   - type: LayoutBox
     margin: large
     children:
+      - type: CheckBox
+        name: showFractions
+        events:
+          change: ./supercode.events::onChange_showFractions
       - type: TextBox
         name: codePrefix
         label: Code Prefix

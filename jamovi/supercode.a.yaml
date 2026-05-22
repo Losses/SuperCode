@@ -68,6 +68,11 @@ options:
           type: Bool
           default: false 
 
+  - name: showFractions
+    title: Show fractions in preview
+    type: Bool
+    default: false
+
   - name: codePrefix
     title: Code Prefix
     type: String

@@ -70,7 +70,7 @@ supercodeClass <- R6::R6Class(
         for (j in seq_len(k)) {
           colName <- paste0("lvlCol", j)
           colTitle <- lvls[j]
-          table$addColumn(name = colName, title = colTitle, type = "number")
+          table$addColumn(name = colName, title = colTitle, type = "text")
         }
 
         # Get contrast labels
@@ -164,7 +164,14 @@ supercodeClass <- R6::R6Class(
           rowVals <- list()
           for (j in seq_len(k)) {
             colName <- paste0("lvlCol", j)
-            rowVals[[colName]] <- preview_cm[j, rowIdx]
+            val <- preview_cm[j, rowIdx]
+            
+            # Formatting as fractions for educational purposes
+            if (self$options$showFractions && !stdz) {
+              val <- as.character(MASS::fractions(val))
+            }
+            
+            rowVals[[colName]] <- val
           }
           table$setRow(rowNo = rowIdx, values = rowVals)
         }

@@ -8,6 +8,7 @@ supercodeOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
         initialize = function(
             vars = NULL,
             varOptions = NULL,
+            showFractions = FALSE,
             codePrefix = "c",
             analysisId = NULL, ...) {
 
@@ -61,6 +62,10 @@ supercodeOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                             "integerize",
                             NULL,
                             default=FALSE))))
+            private$..showFractions <- jmvcore::OptionBool$new(
+                "showFractions",
+                showFractions,
+                default=FALSE)
             private$..codePrefix <- jmvcore::OptionString$new(
                 "codePrefix",
                 codePrefix,
@@ -74,6 +79,7 @@ supercodeOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 
             self$.addOption(private$..vars)
             self$.addOption(private$..varOptions)
+            self$.addOption(private$..showFractions)
             self$.addOption(private$..codePrefix)
             self$.addOption(private$..analysisId)
             self$.addOption(private$..outputCols)
@@ -81,12 +87,14 @@ supercodeOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     active = list(
         vars = function() private$..vars$value,
         varOptions = function() private$..varOptions$value,
+        showFractions = function() private$..showFractions$value,
         codePrefix = function() private$..codePrefix$value,
         analysisId = function() private$..analysisId$value,
         outputCols = function() private$..outputCols$value),
     private = list(
         ..vars = NA,
         ..varOptions = NA,
+        ..showFractions = NA,
         ..codePrefix = NA,
         ..analysisId = NA,
         ..outputCols = NA)
@@ -147,6 +155,7 @@ supercodeBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' @param data .
 #' @param vars .
 #' @param varOptions .
+#' @param showFractions .
 #' @param codePrefix .
 #' @param analysisId .
 #' @return A results object containing:
@@ -160,6 +169,7 @@ supercode <- function(
     data,
     vars,
     varOptions,
+    showFractions = FALSE,
     codePrefix = "c",
     analysisId) {
 
@@ -177,6 +187,7 @@ supercode <- function(
     options <- supercodeOptions$new(
         vars = vars,
         varOptions = varOptions,
+        showFractions = showFractions,
         codePrefix = codePrefix,
         analysisId = analysisId)
 

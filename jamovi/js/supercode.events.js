@@ -45,6 +45,9 @@ const events = {
     onChange_codePrefix: function(ui) {
     },
 
+    onChange_showFractions: function(ui) {
+    },
+
     onChange_outputCols: function(ui) {
         if (ui._activeInstance !== this) return;
         updateOutputButton(ui);
