@@ -204,11 +204,13 @@ supercodeClass <- R6::R6Class(
              }, silent = TRUE)
           }
 
-          base_name <- paste0(prefix, ".", v, j)
+          base_name <- paste0(v, ".", prefix, j)
           display_title <- current_title
 
-          # If we don't have a title, or the current title doesn't start with the correct prefix...
-          if (is.null(display_title) || !startsWith(display_title, paste0(prefix, "."))) {
+          # If we don't have a title, or the current title doesn't match the new naming rule...
+          # We check if it starts with [Variable]. and contains the [Prefix] at the right spot
+          expected_start <- paste0(v, ".", prefix)
+          if (is.null(display_title) || !startsWith(display_title, expected_start)) {
             # Find a new title that doesn't collide with OTHER columns
             candidate <- base_name
             counter <- 1
