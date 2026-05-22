@@ -112,11 +112,11 @@ supercodeResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             super$initialize(
                 options=options,
                 name="",
-                title="Super Code")
+                title="Coding Matrix")
             self$add(jmvcore::Array$new(
                 options=options,
                 name="preview",
-                title="Coding Matrix",
+                title="",
                 items="(vars)",
                 template=jmvcore::Table$new(
                     options=options,
@@ -149,7 +149,7 @@ supercodeBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 weightsSupport = 'none')
         }))
 
-#' Super Code
+#' Coding Matrix
 #'
 #' 
 #' @param data .

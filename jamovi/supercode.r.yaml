@@ -1,11 +1,11 @@
 ---
 name: supercode
-title: Super Code
+title: Coding Matrix
 jrs: '1.1'
 
 items:
   - name: preview
-    title: Coding Matrix
+    title: ''
     type: Array
     items: (vars)
     template:

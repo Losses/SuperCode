@@ -17,12 +17,12 @@ description: >-
   contrast matrix along with clear semantic descriptions of the mathematical
   comparisons executed by each code.
 analyses:
-  - title: Super Code
+  - title: Coding Matrix
     name: supercode
     ns: SuperCode
     category: analyses
     menuGroup: SuperCode
-    menuTitle: Super Code
+    menuTitle: Coding Matrix
 usesNative: false
 minApp: 1.0.8
 
