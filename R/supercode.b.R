@@ -40,6 +40,7 @@ supercodeClass <- R6::R6Class(
         if (k < 2) next
 
         table <- tables$get(key = v)
+        if (is.null(table)) next
 
         # Mapping for full coding names in table titles
         codingNames <- list(
@@ -90,7 +91,8 @@ supercodeClass <- R6::R6Class(
 
         # Set footnote explaining focus, beta interpretation, and intercept in a single formatted block
         noteText <- private$.getFootnoteText(coding, integerize, stdz)
-        table$setNote(key = "explanation", note = noteText)
+        debugText <- private$.getDebugNoteText(v)
+        table$setNote(key = "explanation", note = paste0(noteText, debugText))
       }
     },
 
@@ -169,6 +171,7 @@ supercodeClass <- R6::R6Class(
 
         # Populate the table cells
         table <- tables$get(key = v)
+        if (is.null(table)) next
         for (rowIdx in seq_len(k - 1)) {
           rowVals <- list()
           for (j in seq_len(k)) {
@@ -177,6 +180,11 @@ supercodeClass <- R6::R6Class(
           }
           table$setRow(rowNo = rowIdx, values = rowVals)
         }
+
+        # Set/update footnote in run() as well for instant feedback
+        noteText <- private$.getFootnoteText(coding, integerize, stdz)
+        debugText <- private$.getDebugNoteText(v)
+        table$setNote(key = "explanation", note = paste0(noteText, debugText))
 
         # The rest of .run (creating output columns)
         coded <- cm[as.integer(fac), , drop = FALSE]
@@ -537,6 +545,58 @@ supercodeClass <- R6::R6Class(
         }
       }
       return(NULL)
+    },
+
+    .getDebugNoteText = function(varName) {
+      tryCatch({
+        vars <- self$options$vars
+        varOpts <- self$options$varOptions
+        outputCols <- self$options$outputCols
+        
+        vars_str <- "empty"
+        if (!is.null(vars)) {
+          vars_str <- paste(as.character(vars), collapse = ", ")
+        }
+        
+        opts_str <- "empty"
+        if (!is.null(varOpts) && is.list(varOpts)) {
+          opts_str_list <- lapply(varOpts, function(o) {
+            if (!is.list(o)) return(paste0("atomic:", paste(as.character(o), collapse=",")))
+            
+            v <- if (is.null(o[["var"]])) "NULL" else as.character(o[["var"]])
+            c <- if (is.null(o[["coding"]])) "NULL" else as.character(o[["coding"]])
+            
+            ref_val <- o[["ref"]]
+            ref_str <- if (is.null(ref_val)) "NULL" else paste0("'", as.character(ref_val), "'")
+            
+            stdz_val <- o[["standardize"]]
+            stdz_str <- if (is.null(stdz_val)) "NULL" else as.character(isTRUE(stdz_val))
+            
+            intz_val <- o[["integerize"]]
+            intz_str <- if (is.null(intz_val)) "NULL" else as.character(isTRUE(intz_val))
+            
+            paste0(
+              "[var: ", v, 
+              ", coding: ", c, 
+              ", ref: ", ref_str, 
+              ", stdz: ", stdz_str, 
+              ", intz: ", intz_str, "]"
+            )
+          })
+          opts_str <- paste(unlist(opts_str_list), collapse = "; ")
+        }
+
+        outputCols_str <- if (is.null(outputCols)) "NULL" else as.character(isTRUE(outputCols))
+
+        paste0(
+          "\n\n[Debug Log]\n",
+          "Active vars: ", vars_str, "\n",
+          "varOptions: ", opts_str, "\n",
+          "outputCols active: ", outputCols_str
+        )
+      }, error = function(e) {
+        paste0("\n\n[Debug Log Error]\n", as.character(e$message))
+      })
     }
   )
 )

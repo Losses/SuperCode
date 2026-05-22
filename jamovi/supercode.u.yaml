@@ -5,7 +5,6 @@ stage: 0
 compilerMode: tame
 events:
   update: ./supercode.events::update
-  loaded: ./supercode.events::view_updated
 children:
   - type: VariableSupplier
     persistentItems: false

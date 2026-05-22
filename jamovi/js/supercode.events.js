@@ -4,7 +4,6 @@ const INTEGER_ONLY_CODINGS = new Set(["dummy", "deviation", "poly"]); // 整数 
 const events = {
     update: function(ui) {
         try {
-            if (!ui._initialized) return;
             ui._lastVarOptions = (ui.varOptions.value() || []).map(item => ({ ...item }));
             updateLevelControls(ui);
             updateOutputButton(ui);
@@ -13,21 +12,8 @@ const events = {
         }
     },
 
-    view_updated: function(ui) {
-        try {
-            ui._initialized = true;
-            synchronizeVarOptions(ui);
-            updateLevelControls(ui);
-            updateOutputButton(ui);
-        } catch (e) {
-            console.error("Error in view_updated:", e);
-        }
-    },
-
     onChange_vars: function(ui) {
         try {
-            if (!ui._initialized) return;
-            synchronizeVarOptions(ui);
             updateLevelControls(ui);
             updateOutputButton(ui);
         } catch (e) {
@@ -37,7 +23,9 @@ const events = {
 
     onChange_varOptions: function(ui) {
         try {
-            if (!ui._initialized) return;
+            if (!ui._lastVarOptions) {
+                ui._lastVarOptions = (ui.varOptions.value() || []).map(item => ({ ...item }));
+            }
             runOnChangeVarOptions(ui);
             updateOutputButton(ui);
         } catch (e) {
@@ -47,7 +35,6 @@ const events = {
 
     onChange_outputCols: function(ui) {
         try {
-            if (!ui._initialized) return;
             updateOutputButton(ui);
         } catch (e) {
             console.error("Error in onChange_outputCols:", e);
@@ -63,53 +50,12 @@ function supportsIntegerize(coding)     {
     return !INTEGER_ONLY_CODINGS.has(coding);
 }
 
-function synchronizeVarOptions(ui) {
-    if (!ui || !ui.vars || !ui.varOptions) return;
-
-    const vars = ui.vars.value() || [];
-    const currentList = ui.varOptions.value() || [];
-
-    let changed = false;
-    const newList = [];
-
-    for (let i = 0; i < vars.length; i++) {
-        const v = vars[i];
-        let found = null;
-        for (let j = 0; j < currentList.length; j++) {
-            if (currentList[j] && currentList[j].var === v) {
-                found = currentList[j];
-                break;
-            }
-        }
-        if (found === null) {
-            newList.push({
-                var: v,
-                coding: "dummy",
-                ref: null,
-                standardize: false,
-                integerize: false
-            });
-            changed = true;
-        } else {
-            newList.push(found);
-        }
-    }
-
-    if (newList.length !== currentList.length) {
-        changed = true;
-    }
-
-    if (changed) {
-        ui.varOptions.setValue(newList);
-        ui._lastVarOptions = newList.map(item => ({ ...item }));
-    } else {
-        ui._lastVarOptions = currentList.map(item => ({ ...item }));
-    }
-}
-
 function runOnChangeVarOptions(ui) {
     const currentList = ui.varOptions.value() || [];
-    const lastList = ui._lastVarOptions || [];
+    if (!ui._lastVarOptions) {
+        ui._lastVarOptions = currentList.map(item => ({ ...item }));
+    }
+    const lastList = ui._lastVarOptions;
 
     let changed = false;
     const newList = currentList.map((item, idx) => {
@@ -238,24 +184,15 @@ function updateOutputButton(ui) {
     if (!root)
         return;
 
-    let input = control.input;
-    if (!input && typeof root.querySelector === 'function') {
-        input = root.querySelector('input[type="checkbox"]');
-    }
-    let text = control.label;
-    if (!text && typeof root.querySelector === 'function') {
-        text = root.querySelector('span');
-    }
-    let label = text ? text.parentElement : null;
-    if (!label && typeof root.querySelector === 'function') {
-        label = root.querySelector('label');
-    }
+    let input = control.input || (typeof root.querySelector === 'function' ? root.querySelector('input[type="checkbox"]') : null);
+    let text = control.label || (typeof root.querySelector === 'function' ? root.querySelector('span') : null);
+    let label = text ? text.parentElement : (typeof root.querySelector === 'function' ? root.querySelector('label') : null);
 
     if (!input || !text || !label)
         return;
 
     ensureOutputButtonStyles();
-    bindOutputButtonEvents(ui, control, label, input);
+    bindOutputButtonEvents(ui, input);
 
     input.style.position = 'absolute';
     input.style.opacity = '0';
@@ -267,21 +204,15 @@ function updateOutputButton(ui) {
     label.classList.add('jmv-action-button', 'supercode-output-button');
     label.style.cursor = input.disabled ? 'default' : 'pointer';
 
-    applyOutputButtonState(label, text, control.value() === true, input.disabled);
+    applyOutputButtonState(label, text, input.checked, input.disabled);
 }
 
-function bindOutputButtonEvents(ui, control, label, input) {
-    if (label.dataset.supercodeButtonBound === 'true')
+function bindOutputButtonEvents(ui, input) {
+    if (input.dataset.supercodeButtonBound === 'true')
         return;
 
-    label.dataset.supercodeButtonBound = 'true';
-    label.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (input.disabled) return;
-        const currentVal = control.value() === true;
-        control.setValue(!currentVal);
-    });
+    input.dataset.supercodeButtonBound = 'true';
+    input.addEventListener('change', () => updateOutputButton(ui));
 }
 
 function applyOutputButtonState(label, text, checked, disabled) {
