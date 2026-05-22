@@ -160,18 +160,29 @@ supercodeClass <- R6::R6Class(
         # Populate the table cells
         table <- tables$get(key = v)
         if (is.null(table)) next
+        
+        # Matrix-wide format check to ensure visual consistency
+        is_all_int <- all(abs(preview_cm - round(preview_cm)) < 1e-10)
+
         for (rowIdx in seq_len(k - 1)) {
           rowVals <- list()
           for (j in seq_len(k)) {
             colName <- paste0("lvlCol", j)
             val <- preview_cm[j, rowIdx]
             
-            # Formatting as fractions for educational purposes
-            if (self$options$showFractions && !stdz) {
-              val <- as.character(MASS::fractions(val))
+            if (is_all_int) {
+              # If everything is an integer, show as clean integers
+              val_str <- as.character(round(val))
+            } else if (self$options$showFractions && !stdz) {
+              # If fractions are requested and supported
+              val_str <- as.character(MASS::fractions(val))
+            } else {
+              # Mixed numbers: use consistent decimal formatting
+              val_str <- format(round(val, 3), nsmall = 2, scientific = FALSE)
+              val_str <- trimws(val_str)
             }
             
-            rowVals[[colName]] <- val
+            rowVals[[colName]] <- val_str
           }
           table$setRow(rowNo = rowIdx, values = rowVals)
         }
