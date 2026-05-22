@@ -180,17 +180,28 @@ supercodeClass <- R6::R6Class(
         prefix <- self$options$codePrefix
         if (is.null(prefix) || is.na(prefix) || prefix == "") prefix <- "c"
 
-        # Get all column titles currently in the dataset
+        # Get all column names currently in the dataset
         existing_names <- names(self$data)
         
-        # Identify the titles that belong to THIS instance so we don't collide with ourselves
-        my_current_titles <- c()
+        # Safely extract current titles/keys of THIS instance from the results object
+        # We use private access because it's a synchronous memory read (no bridge overhead)
+        my_titles_by_key <- list()
+        my_current_titles <- character()
         if (!is.null(self$results$outputCols)) {
            try({
-             my_current_titles <- self$results$outputCols$.__enclos_env__$private$.titles
-             if (is.null(my_current_titles)) my_current_titles <- character()
+             keys   <- self$results$outputCols$.__enclos_env__$private$.keys
+             titles <- self$results$outputCols$.__enclos_env__$private$.titles
+             if (length(keys) > 0 && length(keys) == length(titles)) {
+               for (idx in seq_along(keys)) {
+                 k_val <- keys[[idx]]
+                 my_titles_by_key[[k_val]] <- titles[idx]
+                 my_current_titles <- c(my_current_titles, titles[idx])
+               }
+             }
            }, silent = TRUE)
         }
+        
+        # Other columns are those in the dataset that don't match our current titles
         other_names <- setdiff(existing_names, my_current_titles)
 
         for (j in seq_len(k - 1)) {
@@ -198,18 +209,12 @@ supercodeClass <- R6::R6Class(
           stable_key <- paste0(v, "_code_", j)
           
           # 1. Try to maintain stability: Check if we already have a title for this key
-          current_title <- NULL
-          if (!is.null(self$results$outputCols)) {
-             try({
-               item <- self$results$outputCols$get(key = stable_key)
-               if (!is.null(item)) current_title <- item$title
-             }, silent = TRUE)
-          }
+          current_title <- my_titles_by_key[[stable_key]]
 
           base_name <- paste0(v, ".", prefix, j)
           display_title <- current_title
 
-          # If we don't have a title, or the current title doesn't match the new naming rule...
+          # If we don't have a title, or the current title doesn't match the naming rule...
           expected_start <- paste0(v, ".", prefix)
           if (is.null(display_title) || !startsWith(display_title, expected_start) || display_title == "") {
             # Find a new title that doesn't collide with OTHER columns

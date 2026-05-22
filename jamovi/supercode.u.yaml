@@ -51,6 +51,7 @@ children:
             template:
               type: LevelSelector
               label: ''
+              variable: $key
               enable: >-
                 (coding == "dummy" or coding == "simple" or coding ==
                 "deviation")
@@ -69,8 +70,7 @@ children:
               type: CheckBox
               label: ''
               enable: >-
-                (coding == "simple" or coding == "helmert" or coding == "revhelmert"
-                or coding == "forward" or coding == "backward")
+                (coding != "dummy" and coding != "deviation" and coding != "poly")
   - type: LayoutBox
     margin: large
     children:

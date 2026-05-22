@@ -4,11 +4,10 @@ const INTEGER_ONLY_CODINGS = new Set(["dummy", "deviation", "poly"]);
 const events = {
     update: function(ui) {
         try {
+            ui._activeInstance = this;
             synchronizeVarOptions(ui, this);
             updateLevelControls(ui);
             updateOutputButton(ui);
-            
-            ui._activeInstance = this;
             this._initialized = true;
         } catch (e) {
             console.error("Error in update:", e);
@@ -29,10 +28,16 @@ const events = {
     onChange_varOptions: function(ui) {
         try {
             if (ui._activeInstance !== this) return;
+            
+            // If we are currently in a deferred sync, we still want to record the last state,
+            // but we don't want to trigger a new cycle of mutual exclusivity checks yet.
+            if (this._syncing) return;
+            
             if (!this._lastVarOptions) {
                 this._lastVarOptions = (ui.varOptions.value() || []).map(item => ({ ...item }));
             }
             runOnChangeVarOptions(ui, this);
+            updateLevelControls(ui);
             updateOutputButton(ui);
         } catch (e) {
             console.error("Error in onChange_varOptions:", e);
@@ -56,12 +61,16 @@ function supportsReferenceLevel(coding) {
     return REF_LEVEL_CODINGS.has(coding);
 }
 
-function supportsIntegerize(coding)     {
+function supportsIntegerize(coding) {
     return !INTEGER_ONLY_CODINGS.has(coding);
 }
 
+/**
+ * Uses a deferred update to avoid blocking the communication bridge.
+ * This "delays" the setValue to the next tick, allowing jamovi to finish current cycle.
+ */
 function synchronizeVarOptions(ui, context) {
-    if (!ui || !ui.vars || !ui.varOptions) return;
+    if (!ui || !ui.vars || !ui.varOptions || context._syncing) return;
 
     const vars = ui.vars.value() || [];
     const currentList = ui.varOptions.value() || [];
@@ -97,8 +106,16 @@ function synchronizeVarOptions(ui, context) {
     }
 
     if (changed) {
-        ui.varOptions.setValue(newList);
-        context._lastVarOptions = newList.map(item => ({ ...item }));
+        context._syncing = true;
+        // DEFER: Push to next tick to let the bridge breathe
+        setTimeout(() => {
+            try {
+                ui.varOptions.setValue(newList);
+                context._lastVarOptions = newList.map(item => ({ ...item }));
+            } finally {
+                context._syncing = false;
+            }
+        }, 0);
     } else {
         context._lastVarOptions = currentList.map(item => ({ ...item }));
     }
@@ -108,6 +125,7 @@ function runOnChangeVarOptions(ui, context) {
     const currentList = ui.varOptions.value() || [];
     if (!context._lastVarOptions) {
         context._lastVarOptions = currentList.map(item => ({ ...item }));
+        return;
     }
     const lastList = context._lastVarOptions;
 
@@ -121,30 +139,23 @@ function runOnChangeVarOptions(ui, context) {
         let standardize = !!item.standardize;
         let integerize = !!item.integerize;
 
-        // Clean ref if coding changed to something not supporting it
-        if (!supportsReferenceLevel(coding)) {
-            ref = null;
-        }
-
-        // Clean integerize if coding changed to something not supporting it
-        if (!supportsIntegerize(coding)) {
-            integerize = false;
-        }
+        if (!supportsReferenceLevel(coding)) ref = null;
+        if (!supportsIntegerize(coding)) integerize = false;
 
         // Mutual exclusivity check
         if (standardize && integerize) {
             const lastStd = !!lastItem.standardize;
             const lastInt = !!lastItem.integerize;
 
-            if (standardize !== lastStd && integerize === lastInt) {
-                // standardize became true, uncheck integerize
+            if (standardize !== lastStd) {
                 integerize = false;
-            } else if (integerize !== lastInt && standardize === lastStd) {
-                // integerize became true, uncheck standardize
+                changed = true;
+            } else if (integerize !== lastInt) {
                 standardize = false;
+                changed = true;
             } else {
-                // fallback
                 integerize = false;
+                changed = true;
             }
         }
 
@@ -159,13 +170,21 @@ function runOnChangeVarOptions(ui, context) {
     });
 
     if (changed) {
-        ui.varOptions.setValue(newList);
-        context._lastVarOptions = newList.map(item => ({ ...item }));
+        context._syncing = true;
+        // DEFER: Push to next tick
+        setTimeout(() => {
+            try {
+                ui.varOptions.setValue(newList);
+                context._lastVarOptions = newList.map(item => ({ ...item }));
+                // After a deferred setValue, we need to refresh the HTML states
+                updateLevelControls(ui);
+            } finally {
+                context._syncing = false;
+            }
+        }, 0);
     } else {
         context._lastVarOptions = currentList.map(item => ({ ...item }));
     }
-
-    updateLevelControls(ui);
 }
 
 function updateLevelControls(ui) {
@@ -179,13 +198,12 @@ function updateLevelControls(ui) {
         if (!item) return;
         const row = dlist[index] || {};
 
-        if (column === 2) {
+        if (column === 2) { // Reference Level
             const enabled = supportsReferenceLevel(row.coding);
-            item.setPropertyValue('variable', row.var);
             item.setPropertyValue('enable', enabled);
             if (item.input) item.input.disabled = !enabled;
         }
-        else if (column === 4) {
+        else if (column === 4) { // Integerize
             const enabled = supportsIntegerize(row.coding);
             item.setPropertyValue('enable', enabled);
             if (item.input) item.input.disabled = !enabled;
@@ -207,21 +225,12 @@ function ensureOutputButtonStyles() {
             box-shadow: none;
             color: #c2410c;
         }
-
         .jmv-action-button.supercode-output-button.supercode-output-remove:hover {
             background: #fff7ed;
-            background-image: none;
         }
-
-        .jmv-action-button.supercode-output-button.supercode-output-remove:active:hover {
-            background: #ffedd5;
-        }
-
         .jmv-action-button.supercode-output-button.supercode-output-disabled {
             color: #c5c5c5;
             background-color: #ababab;
-            background-image: none;
-            box-shadow: none;
             border: 1px solid #ababab;
             cursor: default;
         }
@@ -230,49 +239,35 @@ function ensureOutputButtonStyles() {
 }
 
 function updateOutputButton(ui) {
-    if (!ui || !ui.outputCols)
-        return;
+    if (!ui || !ui.outputCols) return;
     let control = ui.outputCols;
-
     let root = control.el || control._subel;
-    if (!root)
-        return;
+    if (!root) return;
 
     let input = control.input || (typeof root.querySelector === 'function' ? root.querySelector('input[type="checkbox"]') : null);
     let text = control.label || (typeof root.querySelector === 'function' ? root.querySelector('span') : null);
     let label = text ? text.parentElement : (typeof root.querySelector === 'function' ? root.querySelector('label') : null);
 
-    if (!input || !text || !label)
-        return;
+    if (!input || !text || !label) return;
 
     ensureOutputButtonStyles();
-    bindOutputButtonEvents(ui, input);
+    if (input.dataset.supercodeButtonBound !== 'true') {
+        input.dataset.supercodeButtonBound = 'true';
+        input.addEventListener('change', () => updateOutputButton(ui));
+    }
 
     input.style.position = 'absolute';
     input.style.opacity = '0';
     input.style.width = '1px';
     input.style.height = '1px';
-    input.style.margin = '0';
     input.style.pointerEvents = 'none';
 
     label.classList.add('jmv-action-button', 'supercode-output-button');
     label.style.cursor = input.disabled ? 'default' : 'pointer';
 
-    applyOutputButtonState(label, text, input.checked, input.disabled);
-}
-
-function bindOutputButtonEvents(ui, input) {
-    if (input.dataset.supercodeButtonBound === 'true')
-        return;
-
-    input.dataset.supercodeButtonBound = 'true';
-    input.addEventListener('change', () => updateOutputButton(ui));
-}
-
-function applyOutputButtonState(label, text, checked, disabled) {
-    text.textContent = checked ? 'Remove Columns' : 'Add Columns';
-    label.classList.toggle('supercode-output-remove', checked && !disabled);
-    label.classList.toggle('supercode-output-disabled', disabled);
+    text.textContent = input.checked ? 'Remove Columns' : 'Add Columns';
+    label.classList.toggle('supercode-output-remove', input.checked && !input.disabled);
+    label.classList.toggle('supercode-output-disabled', input.disabled);
 }
 
 module.exports = events;
