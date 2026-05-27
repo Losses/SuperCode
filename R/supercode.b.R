@@ -111,13 +111,13 @@ supercodeClass <- R6::R6Class(
       if (length(vars) == 0) return()
       if (is.null(self$data)) return()
 
-      varOpts   <- self$options$varOptions
-      keys_out  <- c()
+      varOpts    <- self$options$varOptions
+      keys_out   <- c()
       titles_out <- c()
-      descs_out <- c()
-      mtypes    <- c()
-      allvals   <- list()
-      tables    <- self$results$preview
+      descs_out  <- c()
+      mtypes     <- c()
+      allvals    <- list()
+      tables     <- self$results$preview
 
       for (i in seq_along(vars)) {
         v      <- vars[[i]]
@@ -161,133 +161,165 @@ supercodeClass <- R6::R6Class(
         table <- tables$get(key = v)
         if (is.null(table)) next
         
-        # Matrix-wide format check to ensure visual consistency
-        is_all_int <- all(abs(preview_cm - round(preview_cm)) < 1e-10)
-        
-        # Special case: Polynomial fractions (Square Roots)
-        is_poly_frac <- (coding == "poly" && !integerize && self$options$showFractions && !stdz)
-        if (is_poly_frac)
-           poly_int_cm <- private$.buildIntegerPolyCM(k)
-
-        for (rowIdx in seq_len(k - 1)) {
-          rowVals <- list()
-          
-          # For poly frac, pre-calculate SS for the current contrast (column)
-          if (is_poly_frac)
-             ss_val <- sum(poly_int_cm[, rowIdx]^2)
-          
-          for (j in seq_len(k)) {
-            colName <- paste0("lvlCol", j)
-            val <- preview_cm[j, rowIdx]
-            
-            if (is_poly_frac) {
-              w <- poly_int_cm[j, rowIdx]
-              if (w == 0) {
-                val_str <- "0"
-              } else {
-                val_str <- paste0(w, "/\u221A", ss_val) # \u221A is the square root symbol √
-              }
-            } else if (is_all_int) {
-              # If everything is an integer, show as clean integers
-              val_str <- as.character(round(val))
-            } else if (self$options$showFractions && !stdz) {
-              # If fractions are requested and supported
-              val_str <- as.character(MASS::fractions(val))
-            } else {
-              # Mixed numbers: use consistent decimal formatting
-              val_str <- format(round(val, 3), nsmall = 2, scientific = FALSE)
-              val_str <- trimws(val_str)
-            }
-            
-            rowVals[[colName]] <- val_str
-          }
-          table$setRow(rowNo = rowIdx, values = rowVals)
-        }
+        private$.populatePreviewTable(table, preview_cm, coding, integerize, stdz, k)
 
         # Set/update footnote in run() as well for instant feedback
         noteText <- private$.getFootnoteText(coding, integerize, stdz)
         table$setNote(key = "explanation", note = noteText)
 
-        # The rest of .run (creating output columns)
-        coded <- cm[as.integer(fac), , drop = FALSE]
-        if (stdz) coded <- scale(coded)
-
-        prefix <- self$options$codePrefix
-        if (is.null(prefix) || is.na(prefix) || prefix == "") prefix <- "c"
-
-        # Get all column names currently in the dataset
-        existing_names <- names(self$data)
-        
-        # Safely extract current titles/keys of THIS instance from the results object.
-        # Note: This accesses R6 private fields (`.keys` and `.titles`) of `jmvcore::Output`
-        # via the enclosing environment (`.__enclos_env__$private`).
-        #
-        # Why this approach is used:
-        # 1. As documented in docs/UI_BLOCKAGE_GUIDELINES.md, accessing private members directly
-        #    is a synchronous, lightweight memory read. It avoids using `asProtoBuf()`, which
-        #    is heavy and dangerous for synchronization inside `.run()` (could cause deadlocks).
-        # 2. There is currently no public API or active bindings in `jmvcore::Output` to retrieve
-        #    the current list of keys and titles.
-        #
-        # Risk:
-        # This relies on undocumented R6 implementation details of `jmvcore`. A future refactor
-        # of `jmvcore` that renames or restructures `.keys` or `.titles` would cause this to
-        # silently return NULL (which is caught by `try(..., silent = TRUE)`). Downstream logic
-        # would then behave as if no columns exist yet, potentially causing duplicate column names
-        # in the dataset. We use `try(..., silent = TRUE)` to prevent crashing if `jmvcore` changes.
-        my_titles_by_key <- list()
-        my_current_titles <- character()
-        if (!is.null(self$results$outputCols)) {
-           try({
-             keys   <- self$results$outputCols$.__enclos_env__$private$.keys
-             titles <- self$results$outputCols$.__enclos_env__$private$.titles
-             if (length(keys) > 0 && length(keys) == length(titles)) {
-               for (idx in seq_along(keys)) {
-                 k_val <- keys[[idx]]
-                 my_titles_by_key[[k_val]] <- titles[idx]
-                 my_current_titles <- c(my_current_titles, titles[idx])
-               }
-             }
-           }, silent = TRUE)
-        }
-        
-        # Other columns are those in the dataset that don't match our current titles
-        other_names <- setdiff(existing_names, my_current_titles)
-
-        for (j in seq_len(k - 1)) {
-          # Use a simple stable internal key
-          stable_key <- paste0(v, "_code_", j)
-          
-          # 1. Try to maintain stability: Check if we already have a title for this key
-          current_title <- my_titles_by_key[[stable_key]]
-
-          base_name <- paste0(v, ".", prefix, j)
-          display_title <- current_title
-
-          # If we don't have a title, or the current title doesn't match the naming rule...
-          expected_start <- paste0(v, ".", prefix)
-          if (is.null(display_title) || !startsWith(display_title, expected_start) || display_title == "") {
-            # Find a new title that doesn't collide with OTHER columns
-            candidate <- base_name
-            counter <- 1
-            while (candidate %in% other_names) {
-              counter <- counter + 1
-              candidate <- paste0(base_name, "_", counter)
-            }
-            display_title <- candidate
-          }
-          
-          # Add to other_names so subsequent columns in THIS run don't collide with this one
-          other_names <- c(other_names, display_title)
-
-          keys_out   <- c(keys_out, stable_key)
-          titles_out <- c(titles_out, display_title)
-          descs_out  <- c(descs_out, paste0(v, " [", coding, " contrast ", j, "]"))
-          mtypes     <- c(mtypes, "continuous")
-          allvals[[stable_key]] <- as.numeric(coded[, j])
-        }
+        # Compute output columns
+        res <- private$.computeOutputColumns(v, fac, cm, stdz, coding, k)
+        keys_out   <- c(keys_out, res$keys)
+        titles_out <- c(titles_out, res$titles)
+        descs_out  <- c(descs_out, res$descriptions)
+        mtypes     <- c(mtypes, res$measureTypes)
+        allvals    <- c(allvals, res$values)
       }
 
+      # Write output columns
+      private$.writeOutputColumns(keys_out, titles_out, descs_out, mtypes, allvals)
+    },
+
+    .populatePreviewTable = function(table, preview_cm, coding, integerize, stdz, k) {
+      # Matrix-wide format check to ensure visual consistency
+      is_all_int <- all(abs(preview_cm - round(preview_cm)) < 1e-10)
+      
+      # Special case: Polynomial fractions (Square Roots)
+      is_poly_frac <- (coding == "poly" && !integerize && self$options$showFractions && !stdz)
+      if (is_poly_frac)
+         poly_int_cm <- private$.buildIntegerPolyCM(k)
+
+      for (rowIdx in seq_len(k - 1)) {
+        rowVals <- list()
+        
+        # For poly frac, pre-calculate SS for the current contrast (column)
+        if (is_poly_frac)
+           ss_val <- sum(poly_int_cm[, rowIdx]^2)
+        
+        for (j in seq_len(k)) {
+          colName <- paste0("lvlCol", j)
+          val <- preview_cm[j, rowIdx]
+          
+          if (is_poly_frac) {
+            w <- poly_int_cm[j, rowIdx]
+            if (w == 0) {
+              val_str <- "0"
+            } else {
+              val_str <- paste0(w, "/\u221A", ss_val) # \u221A is the square root symbol √
+            }
+          } else if (is_all_int) {
+            # If everything is an integer, show as clean integers
+            val_str <- as.character(round(val))
+          } else if (self$options$showFractions && !stdz) {
+            # If fractions are requested and supported
+            val_str <- as.character(MASS::fractions(val))
+          } else {
+            # Mixed numbers: use consistent decimal formatting
+            val_str <- format(round(val, 3), nsmall = 2, scientific = FALSE)
+            val_str <- trimws(val_str)
+          }
+          
+          rowVals[[colName]] <- val_str
+        }
+        table$setRow(rowNo = rowIdx, values = rowVals)
+      }
+    },
+
+    .computeOutputColumns = function(v, fac, cm, stdz, coding, k) {
+      coded <- cm[as.integer(fac), , drop = FALSE]
+      if (stdz) coded <- scale(coded)
+
+      prefix <- self$options$codePrefix
+      if (is.null(prefix) || is.na(prefix) || prefix == "") prefix <- "c"
+
+      # Get all column names currently in the dataset
+      existing_names <- names(self$data)
+      
+      # Safely extract current titles/keys of THIS instance from the results object.
+      # Note: This accesses R6 private fields (`.keys` and `.titles`) of `jmvcore::Output`
+      # via the enclosing environment (`.__enclos_env__$private`).
+      #
+      # Why this approach is used:
+      # 1. As documented in docs/UI_BLOCKAGE_GUIDELINES.md, accessing private members directly
+      #    is a synchronous, lightweight memory read. It avoids using `asProtoBuf()`, which
+      #    is heavy and dangerous for synchronization inside `.run()` (could cause deadlocks).
+      # 2. There is currently no public API or active bindings in `jmvcore::Output` to retrieve
+      #    the current list of keys and titles.
+      #
+      # Risk:
+      # This relies on undocumented R6 implementation details of `jmvcore`. A future refactor
+      # of `jmvcore` that renames or restructures `.keys` or `.titles` would cause this to
+      # silently return NULL (which is caught by `try(..., silent = TRUE)`). Downstream logic
+      # would then behave as if no columns exist yet, potentially causing duplicate column names
+      # in the dataset. We use `try(..., silent = TRUE)` to prevent crashing if `jmvcore` changes.
+      my_titles_by_key <- list()
+      my_current_titles <- character()
+      if (!is.null(self$results$outputCols)) {
+         try({
+           keys   <- self$results$outputCols$.__enclos_env__$private$.keys
+           titles <- self$results$outputCols$.__enclos_env__$private$.titles
+           if (length(keys) > 0 && length(keys) == length(titles)) {
+             for (idx in seq_along(keys)) {
+               k_val <- keys[[idx]]
+               my_titles_by_key[[k_val]] <- titles[idx]
+               my_current_titles <- c(my_current_titles, titles[idx])
+             }
+           }
+         }, silent = TRUE)
+      }
+      
+      # Other columns are those in the dataset that don't match our current titles
+      other_names <- setdiff(existing_names, my_current_titles)
+
+      keys_out <- character()
+      titles_out <- character()
+      descs_out <- character()
+      mtypes <- character()
+      allvals <- list()
+
+      for (j in seq_len(k - 1)) {
+        # Use a simple stable internal key
+        stable_key <- paste0(v, "_code_", j)
+        
+        # 1. Try to maintain stability: Check if we already have a title for this key
+        current_title <- my_titles_by_key[[stable_key]]
+
+        base_name <- paste0(v, ".", prefix, j)
+        display_title <- current_title
+
+        # If we don't have a title, or the current title doesn't match the naming rule...
+        expected_start <- paste0(v, ".", prefix)
+        if (is.null(display_title) || !startsWith(display_title, expected_start) || display_title == "") {
+          # Find a new title that doesn't collide with OTHER columns
+          candidate <- base_name
+          counter <- 1
+          while (candidate %in% other_names) {
+            counter <- counter + 1
+            candidate <- paste0(base_name, "_", counter)
+          }
+          display_title <- candidate
+        }
+        
+        # Add to other_names so subsequent columns in THIS run don't collide with this one
+        other_names <- c(other_names, display_title)
+
+        keys_out   <- c(keys_out, stable_key)
+        titles_out <- c(titles_out, display_title)
+        descs_out  <- c(descs_out, paste0(v, " [", coding, " contrast ", j, "]"))
+        mtypes     <- c(mtypes, "continuous")
+        allvals[[stable_key]] <- as.numeric(coded[, j])
+      }
+
+      list(
+        keys = keys_out,
+        titles = titles_out,
+        descriptions = descs_out,
+        measureTypes = mtypes,
+        values = allvals
+      )
+    },
+
+    .writeOutputColumns = function(keys_out, titles_out, descs_out, mtypes, allvals) {
       if (self$options$outputCols) {
         if (length(keys_out) == 0) {
           self$results$outputCols$set(
