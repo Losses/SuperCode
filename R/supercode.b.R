@@ -218,8 +218,23 @@ supercodeClass <- R6::R6Class(
         # Get all column names currently in the dataset
         existing_names <- names(self$data)
         
-        # Safely extract current titles/keys of THIS instance from the results object
-        # We use private access because it's a synchronous memory read (no bridge overhead)
+        # Safely extract current titles/keys of THIS instance from the results object.
+        # Note: This accesses R6 private fields (`.keys` and `.titles`) of `jmvcore::Output`
+        # via the enclosing environment (`.__enclos_env__$private`).
+        #
+        # Why this approach is used:
+        # 1. As documented in docs/UI_BLOCKAGE_GUIDELINES.md, accessing private members directly
+        #    is a synchronous, lightweight memory read. It avoids using `asProtoBuf()`, which
+        #    is heavy and dangerous for synchronization inside `.run()` (could cause deadlocks).
+        # 2. There is currently no public API or active bindings in `jmvcore::Output` to retrieve
+        #    the current list of keys and titles.
+        #
+        # Risk:
+        # This relies on undocumented R6 implementation details of `jmvcore`. A future refactor
+        # of `jmvcore` that renames or restructures `.keys` or `.titles` would cause this to
+        # silently return NULL (which is caught by `try(..., silent = TRUE)`). Downstream logic
+        # would then behave as if no columns exist yet, potentially causing duplicate column names
+        # in the dataset. We use `try(..., silent = TRUE)` to prevent crashing if `jmvcore` changes.
         my_titles_by_key <- list()
         my_current_titles <- character()
         if (!is.null(self$results$outputCols)) {
