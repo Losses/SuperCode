@@ -75,7 +75,7 @@ children:
           change: ./supercode.events::onChange_showFractions
       - type: TextBox
         name: codePrefix
-        label: Code Prefix
+        label: Code prefix
         format: string
         events:
           change: ./supercode.events::onChange_codePrefix

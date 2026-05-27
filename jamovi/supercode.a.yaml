@@ -69,12 +69,12 @@ options:
           default: false 
 
   - name: showFractions
-    title: Show fractions in preview
+    title: Fractions in preview
     type: Bool
     default: false
 
   - name: codePrefix
-    title: Code Prefix
+    title: Code prefix
     type: String
     default: c
 
