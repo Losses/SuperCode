@@ -58,7 +58,7 @@ supercodeClass <- R6::R6Class(
           codingName <- coding
 
         # Set title dynamically to include coding name
-        table$setTitle(paste0("<strong>", v, "</strong>", " &middot; ", codingName))
+        table$setTitle(paste0("<strong>", v, "</strong>", " · ", codingName))
 
         # Add Comparison/Contrast column
         table$addColumn(name = "contrast", title = "", type = "text")
