@@ -17,13 +17,13 @@ description: >-
   contrast matrix along with clear semantic descriptions of the mathematical
   comparisons executed by each code.
 analyses:
-  - title: Coding Matrix
+  - title: Recode Variables
     name: supercode
     ns: SuperCode
     category: analyses
     menuGroup: Regression
-    menuSubgroup: SuperCode
-    menuTitle: Coding Matrix
+    menuSubgroup: Super Code
+    menuTitle: Recode Variables
 usesNative: false
 minApp: 1.0.8
 

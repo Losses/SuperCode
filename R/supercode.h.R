@@ -112,7 +112,7 @@ supercodeResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             super$initialize(
                 options=options,
                 name="",
-                title="Coding Matrix")
+                title="Recode Variables")
             self$add(jmvcore::Array$new(
                 options=options,
                 name="preview",
@@ -149,7 +149,7 @@ supercodeBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 weightsSupport = 'none')
         }))
 
-#' Coding Matrix
+#' Recode Variables
 #'
 #' 
 #' @param data .

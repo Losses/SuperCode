@@ -70,7 +70,7 @@ supercodeClass <- R6::R6Class(
         for (j in seq_len(k)) {
           colName <- paste0("lvlCol", j)
           colTitle <- lvls[j]
-          table$addColumn(name = colName, title = colTitle, type = "text")
+          table$addColumn(name = colName, title = colTitle, type = "number")
         }
 
         # Get contrast labels
