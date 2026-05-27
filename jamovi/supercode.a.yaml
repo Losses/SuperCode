@@ -2,7 +2,7 @@
 name: supercode
 title: Recode Variables
 menuGroup: Regression
-version: '0.0.1'
+version: '0.0.4'
 jas: '1.2'
 
 options:
