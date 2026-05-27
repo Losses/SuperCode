@@ -1,7 +1,7 @@
 ---
 title: Categorical Variables Coding Tool
 name: SuperCode
-version: 0.0.3
+version: 0.0.4
 jms: '1.0'
 authors:
   - Losses Don
